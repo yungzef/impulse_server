@@ -1,0 +1,2252 @@
+сейчас я тебе пришлю весь код приложения а ты должен перевести его на украинский язык и сделать дизайн для(errors_ticket_page.dart, random_ticket_page.dart, ticket_page.dart, app_theme.dart), всё остальное уже содержит в себе нужный дизайн. вот промпт:
+
+🎨 Цветовая палитра
+	•	Основной акцентный цвет: Яркий салатово-лаймовый (#D7FF56 или близкий оттенок). Используется в логотипе, кнопках и как фон на главном экране.
+	•	Фоновый цвет: Глубокий тёмно-серый/графитовый (#1C1C1E или около того). Задает общий темный фон, создающий контраст и подчеркивающий контент.
+	•	Текст: Светло-серый и белый (#F5F5F5, #E5E5E7) для хорошей читаемости на тёмном фоне.
+	•	Дополнительные цвета: Белые и чуть приглушённые серые используются для иконок и текста второго уровня.
+
+⸻
+
+📱 Интерфейсные элементы
+
+Кнопки:
+	•	Форма: Круглая или с сильным скруглением (full rounded).
+	•	Размер: Умеренно большие (оптимально для касания), особенно на нижней панели.
+	•	Цвет: Акцентный (салатово-лаймовый), иконки внутри — тёмные для контраста.
+	•	Состояния: Нет теней, фокус на чистые формы и простоту. Активное состояние выделяется ярче.
+
+Иконки:
+	•	Линейные, минималистичные, хорошо читаемые. Используется монохромная палитра.
+	•	Размер и стиль согласованы с общей визуальной лёгкостью интерфейса.
+
+⸻
+
+🧾 Текст
+	•	Шрифт: Без засечек, вероятно, что-то наподобие SF Pro или Inter.
+	•	Размеры:
+	•	Заголовки: ~20–24 pt.
+	•	Основной текст: ~14–16 pt.
+	•	Подписи и второстепенный текст: ~12 pt.
+	•	Цвет: Белый/светло-серый для читаемости на тёмном фоне.
+	•	Выравнивание: В основном по левому краю, с хорошими отступами.
+
+⸻
+
+📐 Отступы и сетка
+	•	Внутренние отступы: Просторные, ~16–24 px вокруг элементов.
+	•	Сетка: 4/8 pt модульная система, хорошо подходит для адаптации под мобильные и десктоп.
+	•	Между секциями: Используется достаточно воздуха, акцент на визуальной иерархии и чистоте.
+
+⸻
+
+🧩 Карточки и визуальные блоки
+	•	Формы: Скругленные углы, радиус ~20–24 px.
+	•	Фон: Лёгкие градиенты, иногда с мягким внутренним свечением.
+	•	Контент: Видео- и изображенческие блоки визуально сочные, с акцентом на эстетичность.
+
+⸻
+
+🔄 Анимации и переходы (по ощущениям)
+	•	Вероятны мягкие, плавные анимации.
+	•	Скролл и переключения должны ощущаться “живыми”, но не перегруженными.
+
+⸻
+
+Этот стиль отлично масштабируется как на мобильных, так и на десктопных устройствах: на мобильных акцент на центральных кнопках и вертикальной прокрутке, на десктопах можно адаптировать с более широкой сеткой и панелями.
+
+код:
+
+// lib/features/favorites/ui/favorites_page.dart
+import 'package:flutter/material.dart';
+import 'package:impulse/core/services/api_client.dart';
+import 'package:impulse/data/models/question_model.dart';
+
+class FavoritesPage extends StatefulWidget {
+  final String? userId;
+
+  const FavoritesPage({super.key, required this.userId});
+
+  @override
+  State<FavoritesPage> createState() => _FavoritesPageState();
+}
+
+class _FavoritesPageState extends State<FavoritesPage> {
+  late final ApiClient _client;
+  late Future<List<QuestionModel>> _favoritesFuture;
+  bool _isLoading = false;
+  List<QuestionModel> _favorites = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _client = ApiClient(userId: widget.userId);
+    _favoritesFuture = _loadFavorites();
+  }
+
+  Future<List<QuestionModel>> _loadFavorites() async {
+    setState(() => _isLoading = true);
+    try {
+      final favorites = await _client.getFavoriteQuestions();
+      setState(() {
+        _favorites = favorites;
+        _isLoading = false;
+      });
+      return favorites;
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Помилка завантаження обраного: $e')),
+      );
+      return [];
+    }
+  }
+
+  bool _isRefreshing = false;
+
+  Future<void> _refreshFavorites() async {
+    if (_isRefreshing) return;
+    setState(() => _isRefreshing = true);
+    try {
+      final updatedFuture = _loadFavorites();
+      setState(() {
+        _favoritesFuture = updatedFuture;
+      });
+    } finally {
+      setState(() => _isRefreshing = false);
+    }
+  }
+
+  Future<void> _toggleFavorite(QuestionModel question) async {
+    try {
+      await _client.removeFromFavorites(question.id);
+      setState(() {
+        question.isFavorite = false;
+      });
+      await _refreshFavorites();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Питання видалено з обраного')),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Помилка: $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Обрані питання'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshFavorites,
+          ),
+        ],
+      ),
+      body: FutureBuilder<List<QuestionModel>>(
+        future: _favoritesFuture,
+        builder: (context, snapshot) {
+          if (_isLoading) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return _buildErrorView(snapshot.error.toString());
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return _buildEmptyView();
+          }
+
+          final favorites = snapshot.data!;
+          return AnimatedList(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            initialItemCount: favorites.length,
+            itemBuilder: (context, index, animation) {
+              final question = favorites[index];
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1, 0),
+                  end: Offset.zero,
+                ).animate(CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOut,
+                )),
+                child: _buildQuestionCard(context, question),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildErrorView(String error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 48, color: Colors.red),
+          const SizedBox(height: 16),
+          Text('Помилка завантаження', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          Text(error, textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodyMedium),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _refreshFavorites,
+            child: const Text('Спробувати знову'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.star_border, size: 48, color: Colors.amber),
+          const SizedBox(height: 16),
+          Text('Немає обраних питань', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          const Text(
+            'Додавайте питання до обраного, і вони з\'являться тут',
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuestionCard(BuildContext context, QuestionModel question) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: Color(0xFF1C1C1E), // Темний фон
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24), // Сильне скруглення
+      ),
+      child: ExpansionTile(
+        title: Text(
+          question.question,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: Colors.white, // Білий текст
+          ),
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (question.image != null && question.image!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Image.network(
+                        '${AppConfig.apiBaseUrl}/image?path=${question.image!}',
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                Text(
+                  question.explanation,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Colors.white, // Білий текст
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton.icon(
+                      icon: const Icon(Icons.star, color: Colors.amber),
+                      label: const Text('Видалити з обраного'),
+                      onPressed: () => _toggleFavorite(question),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Color(0xFFD7FF56), // Салатовий колір
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// lib/features/home/ui/main_menu_page.dart
+import 'package:flutter/material.dart';
+import 'package:impulse/app_theme.dart';
+import 'package:impulse/features/home/widgets/progress_widget.dart';
+import 'package:impulse/features/settings/ui/settings_page.dart';
+import 'package:impulse/features/feedback/ui/feedback_page.dart';
+import 'package:impulse/features/themes/ui/theme_list_page.dart';
+import 'package:impulse/features/ticket/ui/errors_ticket_page.dart';
+import 'package:impulse/features/ticket/ui/random_ticket_page.dart';
+import 'package:impulse/features/favorites/ui/favorites_page.dart';
+
+class MainMenuPage extends StatelessWidget {
+  final String? userId;
+
+  const MainMenuPage({super.key, required this.userId});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Color(0xFF1C1C1E), // Темний фон
+      appBar: AppBar(
+        title: const Text('Імпульс ПДР'),
+        backgroundColor: Color(0xFF1C1C1E), // Темний фон
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => SettingsPage(userId: userId),
+              ),
+            ),
+          ),
+        ],
+      ),
+      drawer: AppDrawer(userId: userId),
+      body: Column(
+        children: [
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: ProgressWidget(userId: userId),
+          ),
+          const SizedBox(height: 24),
+          Expanded(
+            child: GridView.count(
+              padding: const EdgeInsets.all(16),
+              crossAxisCount: 2,
+              childAspectRatio: 1.2,
+              mainAxisSpacing: 16,
+              crossAxisSpacing: 16,
+              children: [
+                _buildMenuButton(
+                  context,
+                  icon: Icons.book,
+                  label: 'Теми',
+                  color: Color(0xFFD7FF56), // Салатовий колір
+                  onTap: () => _navigateTo(context, ThemeListPage(telegramUserId: userId)),
+                ),
+                _buildMenuButton(
+                  context,
+                  icon: Icons.help_outline,
+                  label: 'Білет',
+                  color: Color(0xFFD7FF56), // Салатовий колір
+                  onTap: () => _navigateTo(context, RandomTicketPage(
+                    telegramUserId: userId,
+                    onProgressUpdated: () {},
+                  )),
+                ),
+                _buildMenuButton(
+                  context,
+                  icon: Icons.error_outline,
+                  label: 'Помилки',
+                  color: Color(0xFFD7FF56), // Салатовий колір
+                  onTap: () => _navigateTo(context, ErrorsTicketPage(
+                    userId: userId,
+                    onProgressUpdated: () {},
+                  )),
+                ),
+                _buildMenuButton(
+                  context,
+                  icon: Icons.star,
+                  label: 'Обране',
+                  color: Color(0xFFD7FF56), // Салатовий колір
+                  onTap: () => _navigateTo(context, FavoritesPage(userId: userId)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _navigateTo(BuildContext context, Widget page) {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => page,
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(
+            opacity: animation,
+            child: child,
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildMenuButton(
+      BuildContext context, {
+        required IconData icon,
+        required String label,
+        required Color color,
+        required VoidCallback onTap,
+      }) {
+    return Card(
+      elevation: 0,
+      color: Color(0xFF2C2C2E), // Темніша картка
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24), // Сильне скруглення
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 32, color: color),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                label,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: Colors.white, // Білий текст
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class AppDrawer extends StatelessWidget {
+  final String? userId;
+
+  const AppDrawer({super.key, required this.userId});
+
+  @override
+  Widget build(BuildContext context) {
+    return Drawer(
+      backgroundColor: Color(0xFF1C1C1E), // Темний фон
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: Color(0xFFD7FF56), // Салатовий колір
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Імпульс ПДР',
+                  style: TextStyle(
+                    color: Colors.black, // Чорний текст для контрасту
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  userId ?? 'Гість',
+                  style: const TextStyle(
+                    color: Colors.black87,
+                    fontSize: 16,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.home, color: Colors.white),
+            title: const Text('Головна', style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.settings, color: Colors.white),
+            title: const Text('Налаштування', style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SettingsPage(userId: userId),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.feedback, color: Colors.white),
+            title: const Text('Зворотній зв\'язок', style: TextStyle(color: Colors.white)),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => FeedbackPage(userId: userId),
+                ),
+              );
+            },
+          ),
+          const Divider(color: Colors.grey),
+          ListTile(
+            leading: const Icon(Icons.info, color: Colors.white),
+            title: const Text('Про додаток', style: TextStyle(color: Colors.white)),
+            onTap: () {
+              showAboutDialog(
+                context: context,
+                applicationName: 'Імпульс ПДР',
+                applicationVersion: '1.0.0',
+                applicationIcon: const Icon(
+                  Icons.bolt,
+                  color: Color(0xFFD7FF56), // Салатовий колір
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// lib/features/home/widgets/progress_widget.dart
+import 'package:flutter/material.dart';
+import 'package:impulse/core/services/api_client.dart';
+import '../../../app_theme.dart';
+
+class ProgressWidget extends StatefulWidget {
+  final String? userId;
+
+  const ProgressWidget({super.key, required this.userId});
+
+  @override
+  State<ProgressWidget> createState() => _ProgressWidgetState();
+}
+
+class _ProgressWidgetState extends State<ProgressWidget> {
+  final _client = ApiClient();
+  Map<String, dynamic> _progress = {
+    'total': 0,
+    'correct': 0,
+    'wrong': 0,
+    'accuracy': 0.0,
+  };
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProgress();
+  }
+
+  Future<void> _loadProgress() async {
+    try {
+      final progress = await _client.getUserProgress();
+      if (mounted) {
+        setState(() {
+          _progress = progress;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+      debugPrint('Помилка завантаження прогресу: $e');
+    }
+  }
+
+  void _refreshProgress() {
+    setState(() => _isLoading = true);
+    _loadProgress();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final accuracy = (_progress['accuracy'] * 100).toStringAsFixed(1);
+    return Card(
+      elevation: 0,
+      color: Color(0xFF2C2C2E), // Темніша картка
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24), // Сильне скруглення
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Ваш прогрес',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white, // Білий текст
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.refresh, color: Colors.white),
+                  onPressed: _refreshProgress,
+                  iconSize: 20,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            LinearProgressIndicator(
+              value: _progress['accuracy'],
+              minHeight: 12,
+              backgroundColor: Colors.grey[800],
+              color: _getProgressColor(_progress['accuracy']),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '$accuracy% правильних відповідей',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Colors.white70, // Світло-сірий текст
+              ),
+              textAlign: TextAlign.end,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStatItem(
+                  context,
+                  value: _progress['total'].toString(),
+                  label: 'Всього',
+                  icon: Icons.format_list_numbered,
+                  color: Color(0xFFD7FF56), // Салатовий колір
+                ),
+                _buildStatItem(
+                  context,
+                  value: _progress['correct'].toString(),
+                  label: 'Правильно',
+                  icon: Icons.check_circle,
+                  color: Colors.green,
+                ),
+                _buildStatItem(
+                  context,
+                  value: _progress['wrong'].toString(),
+                  label: 'Помилки',
+                  icon: Icons.error_outline,
+                  color: Colors.red,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Color _getProgressColor(double accuracy) {
+    if (accuracy > 0.7) return Colors.green;
+    if (accuracy > 0.4) return Colors.orange;
+    return Colors.red;
+  }
+
+  Widget _buildStatItem(
+      BuildContext context, {
+        required String value,
+        required String label,
+        required IconData icon,
+        required Color color,
+      }) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.2),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, size: 20, color: color),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Colors.white70, // Світло-сірий текст
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// lib/features/settings/ui/settings_page.dart
+import 'package:flutter/material.dart';
+import 'package:impulse/core/services/api_client.dart';
+
+class SettingsPage extends StatefulWidget {
+  final String? userId;
+
+  const SettingsPage({super.key, required this.userId});
+
+  @override
+  State<SettingsPage> createState() => _SettingsPageState();
+}
+
+class _SettingsPageState extends State<SettingsPage> {
+  bool _darkMode = false;
+  bool _notifications = true;
+  bool _soundEffects = true;
+
+  Future<void> _resetProgress() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Скинути прогрес?'),
+        content: const Text('Усі ваші результати будуть видалені. Ви впевнені?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Скасувати'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Скинути', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        final client = ApiClient(userId: widget.userId);
+        // TODO: Додати метод resetProgress в ApiClient
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Прогрес скинуто')),
+        );
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Помилка: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Color(0xFF1C1C1E), // Темний фон
+      appBar: AppBar(
+        title: const Text('Налаштування'),
+        backgroundColor: Color(0xFF1C1C1E), // Темний фон
+      ),
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text('Загальні', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+          SwitchListTile(
+            title: const Text('Темна тема', style: TextStyle(color: Colors.white)),
+            value: _darkMode,
+            onChanged: (value) => setState(() => _darkMode = value),
+          ),
+          SwitchListTile(
+            title: const Text('Сповіщення', style: TextStyle(color: Colors.white)),
+            value: _notifications,
+            onChanged: (value) => setState(() => _notifications = value),
+          ),
+          SwitchListTile(
+            title: const Text('Звукові ефекти', style: TextStyle(color: Colors.white)),
+            value: _soundEffects,
+            onChanged: (value) => setState(() => _soundEffects = value),
+          ),
+          const Divider(color: Colors.grey),
+          const Text('Обліковий запис', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+          ListTile(
+            title: const Text('Скинути прогрес', style: TextStyle(color: Colors.white)),
+            trailing: const Icon(Icons.delete, color: Colors.white),
+            onTap: _resetProgress,
+          ),
+          const Divider(color: Colors.grey),
+          const Text('Про додаток', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+          ListTile(
+            title: const Text('Версія', style: TextStyle(color: Colors.white)),
+            subtitle: const Text('1.0.0', style: TextStyle(color: Colors.white70)),
+            trailing: const Icon(Icons.info, color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// lib/features/themes/ui/theme_list_page.dart
+import 'package:flutter/material.dart';
+import 'package:impulse/core/services/api_client.dart';
+import 'package:impulse/data/models/theme_model.dart';
+import 'package:impulse/features/data/theme_repository.dart';
+import 'package:impulse/features/ticket/ui/ticket_page.dart';
+import 'theme_tile.dart';
+
+class ThemeListPage extends StatefulWidget {
+  final String? telegramUserId;
+
+  const ThemeListPage({super.key, required this.telegramUserId});
+
+  @override
+  State<ThemeListPage> createState() => _ThemeListPageState();
+}
+
+class _ThemeListPageState extends State<ThemeListPage> {
+  late final ThemeRepository _repository;
+  late Future<List<ThemeModel>> _themesFuture;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    final apiClient = ApiClient(userId: widget.telegramUserId);
+    _repository = ThemeRepository(apiClient: apiClient);
+    _themesFuture = _loadThemesWithProgress();
+  }
+
+  Future<List<ThemeModel>> _loadThemesWithProgress() async {
+    try {
+      var themes = await _repository.loadThemes();
+
+      List<ThemeModel> updatedThemes = [];
+      for (var theme in themes) {
+        final progress = await _repository.loadThemeProgress(theme.index);
+        updatedThemes.add(theme.copyWith(
+          lastAnsweredIndex: progress['last_question'],
+          accuracy: progress['accuracy'],
+        ));
+      }
+
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+      return updatedThemes;
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+      rethrow;
+    }
+  }
+
+  Future<void> _refreshThemes() async {
+    setState(() => _isLoading = true);
+    try {
+      final updatedFuture = _loadThemesWithProgress();
+      setState(() {
+        _themesFuture = updatedFuture;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Помилка оновлення: $e')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Color(0xFF1C1C1E), // Темний фон
+      appBar: AppBar(
+        title: const Text('Теми'),
+        backgroundColor: Color(0xFF1C1C1E), // Темний фон
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshThemes,
+          ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : FutureBuilder<List<ThemeModel>>(
+        future: _themesFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Помилка завантаження тем',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Colors.white, // Білий текст
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: _refreshThemes,
+                    child: const Text('Спробувати знову'),
+                  ),
+                ],
+              ),
+            );
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.book, size: 48, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Теми не знайдені',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Colors.white, // Білий текст
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: _refreshThemes,
+                    child: const Text('Оновити'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final themes = snapshot.data!;
+          return RefreshIndicator(
+            onRefresh: _refreshThemes,
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              itemCount: themes.length,
+              separatorBuilder: (context, index) => const Divider(height: 1, color: Colors.grey),
+              itemBuilder: (context, index) {
+                final theme = themes[index];
+                return ThemeTile(
+                  theme: theme,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => TicketPage(
+                          title: theme.name,
+                          loader: (client) => client.getThemeQuestions(theme.index),
+                          telegramUserId: widget.telegramUserId,
+                          startFromIndex: theme.lastAnsweredIndex,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// lib/features/themes/ui/theme_tile.dart
+import 'package:flutter/material.dart';
+import 'package:impulse/data/models/theme_model.dart';
+import '../../../app_theme.dart';
+
+class ThemeTile extends StatelessWidget {
+  final ThemeModel theme;
+  final VoidCallback onTap;
+
+  const ThemeTile({
+    super.key,
+    required this.theme,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 0,
+      color: Color(0xFF2C2C2E), // Темніша картка
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(24), // Сильне скруглення
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(24),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: _getThemeColor(theme.accuracy),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: Text(
+                    '${theme.index + 1}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      theme.name,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white, // Білий текст
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${theme.questionCount} питань',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Colors.white70, // Світло-сірий текст
+                      ),
+                    ),
+                    if (theme.lastAnsweredIndex != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        'Продовжити з питання ${theme.lastAnsweredIndex! + 1}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Color(0xFFD7FF56), // Салатовий колір
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: Colors.white),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Color _getThemeColor(double? accuracy) {
+    if (accuracy == null) return Colors.grey;
+    if (accuracy > 0.7) return Colors.green;
+    if (accuracy > 0.4) return Colors.orange;
+    return Colors.red;
+  }
+}
+
+// lib/features/ticket/ui/errors_ticket_page.dart
+import 'package:flutter/material.dart';
+import 'package:impulse/core/services/api_client.dart';
+import 'package:impulse/data/models/question_model.dart';
+
+class ErrorsTicketPage extends StatefulWidget {
+  final String? userId;
+  final Function onProgressUpdated;
+
+  const ErrorsTicketPage({super.key, required this.userId, required this.onProgressUpdated});
+
+  @override
+  State<ErrorsTicketPage> createState() => _ErrorsTicketPageState();
+}
+
+class _ErrorsTicketPageState extends State<ErrorsTicketPage> {
+  late final ApiClient _client;
+  late Future<List<QuestionModel>> _questionsFuture;
+  int _currentIndex = 0;
+  int? _selectedAnswer;
+
+  @override
+  void initState() {
+    super.initState();
+    _client = ApiClient(userId: widget.userId);
+    _loadQuestions();
+  }
+
+  Future<void> _loadQuestions() async {
+    setState(() {
+      _questionsFuture = _client.getErrorQuestions();
+    });
+  }
+
+  void _nextQuestion() {
+    setState(() {
+      _currentIndex++;
+      _selectedAnswer = null;
+    });
+  }
+
+  void _handleAnswer(int index, QuestionModel question) async {
+    setState(() => _selectedAnswer = index);
+
+    try {
+      final isCorrect = index == question.correctIndex;
+      await _client.trackQuestionAnswer(question.id, isCorrect);
+
+      // Обновляем прогресс
+      if (widget.onProgressUpdated != null) {
+        widget.onProgressUpdated!();
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  Future<void> _toggleFavorite(QuestionModel question) async {
+    try {
+      await _client.toggleFavorite(question.id, !question.isFavorite);
+      setState(() {
+        question.isFavorite = !question.isFavorite;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(question.isFavorite
+              ? 'Добавлено в избранное'
+              : 'Удалено из избранного'),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка: $e'),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Ошибки'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadQuestions,
+          ),
+        ],
+      ),
+      body: FutureBuilder<List<QuestionModel>>(
+        future: _questionsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text('Ошибка: ${snapshot.error}'));
+          }
+
+          final questions = snapshot.data ?? [];
+
+          if (questions.isEmpty) {
+            return const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text('Нет вопросов с ошибками'),
+                  SizedBox(height: 16),
+                  Text('Ответьте неправильно на вопросы, и они появятся здесь'),
+                ],
+              ),
+            );
+          }
+
+          if (_currentIndex >= questions.length) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Вы ответили на все вопросы!'),
+                  ElevatedButton(
+                    onPressed: _loadQuestions,
+                    child: const Text('Начать заново'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final question = questions[_currentIndex];
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (question.image != null && question.image!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        '${AppConfig.apiBaseUrl}/image?path=${question.image!}',
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                Text(
+                  'Вопрос ${_currentIndex + 1} из ${questions.length}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  question.question,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                ...question.answers.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final answer = entry.value;
+                  final isCorrect = index == question.correctIndex;
+                  final isSelected = _selectedAnswer == index;
+
+                  Color? borderColor;
+                  Color? backgroundColor;
+                  IconData? icon;
+                  Color? iconColor;
+
+                  if (_selectedAnswer != null) {
+                    if (isCorrect) {
+                      borderColor = Colors.green;
+                      backgroundColor = Colors.green.withOpacity(0.1);
+                      icon = Icons.check;
+                      iconColor = Colors.green;
+                    } else if (isSelected) {
+                      borderColor = Colors.red;
+                      backgroundColor = Colors.red.withOpacity(0.1);
+                      icon = Icons.close;
+                      iconColor = Colors.red;
+                    }
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: borderColor ?? Theme.of(context).colorScheme.outline,
+                        ),
+                        backgroundColor: backgroundColor,
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                        alignment: Alignment.centerLeft,
+                      ),
+                      onPressed: _selectedAnswer == null
+                          ? () => _handleAnswer(index, question)
+                          : null,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              answer,
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                          ),
+                          if (icon != null)
+                            Icon(icon, size: 20, color: iconColor),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+                if (_selectedAnswer != null) ...[
+                  const SizedBox(height: 24),
+                  Card(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    margin: EdgeInsets.zero,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Объяснение:',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            question.explanation,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton(
+                        onPressed: _nextQuestion,
+                        child: const Text('Следующий вопрос'),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          question.isFavorite ? Icons.star : Icons.star_border,
+                          color: Colors.amber,
+                        ),
+                        onPressed: () => _toggleFavorite(question),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+import 'package:flutter/material.dart';
+import 'package:impulse/core/services/api_client.dart';
+import 'package:impulse/data/models/question_model.dart';
+
+class RandomTicketPage extends StatefulWidget {
+  final String? telegramUserId;
+  final Function onProgressUpdated;
+
+  const RandomTicketPage({super.key, required this.telegramUserId, required this.onProgressUpdated});
+
+  @override
+  State<RandomTicketPage> createState() => _RandomTicketPageState();
+}
+
+class _RandomTicketPageState extends State<RandomTicketPage> {
+  late final ApiClient _client;
+  late Future<List<QuestionModel>> _questionsFuture;
+  int _currentIndex = 0;
+  int? _selectedAnswer;
+
+  @override
+  void initState() {
+    super.initState();
+    _client = ApiClient(userId: widget.telegramUserId);
+    _loadQuestions();
+  }
+
+  Future<void> _loadQuestions() async {
+    setState(() {
+      _questionsFuture = _client.getTicketRandom();
+    });
+  }
+
+  void _handleAnswer(int index, QuestionModel question) async {
+    setState(() => _selectedAnswer = index);
+
+    try {
+      final isCorrect = index == question.correctIndex;
+      await _client.trackQuestionAnswer(question.id, isCorrect);
+
+      // Обновляем прогресс
+      if (widget.onProgressUpdated != null) {
+        widget.onProgressUpdated!();
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    }
+  }
+
+  void _nextQuestion() {
+    setState(() {
+      _currentIndex++;
+      _selectedAnswer = null;
+    });
+  }
+
+  Future<void> _toggleFavorite(QuestionModel question) async {
+    try {
+      await _client.toggleFavorite(question.id, !question.isFavorite);
+      setState(() {
+        question.isFavorite = !question.isFavorite;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(question.isFavorite
+              ? 'Добавлено в избранное'
+              : 'Удалено из избранного'),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ошибка: $e'),
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Случайный билет'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _loadQuestions,
+            tooltip: 'Обновить вопросы',
+          ),
+        ],
+      ),
+      body: FutureBuilder<List<QuestionModel>>(
+        future: _questionsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(
+              child: CircularProgressIndicator(),
+            );
+          } else if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 48, color: Colors.red),
+                  SizedBox(height: 16),
+                  Text(
+                    'Ошибка загрузки',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: _loadQuestions,
+                    child: Text('Попробовать снова'),
+                  ),
+                ],
+              ),
+            );
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.help_outline, size: 48, color: Colors.grey),
+                  SizedBox(height: 16),
+                  Text(
+                    'Нет вопросов',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Попробуйте обновить список',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final questions = snapshot.data!;
+          if (_currentIndex >= questions.length) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.check_circle, size: 48, color: Colors.green),
+                  SizedBox(height: 16),
+                  Text(
+                    'Вы ответили на все вопросы!',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    icon: Icon(Icons.refresh),
+                    label: Text('Начать заново'),
+                    onPressed: _loadQuestions,
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final question = questions[_currentIndex];
+          return SingleChildScrollView(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (question.image != null && question.image!.isNotEmpty)
+                  Padding(
+                    padding: EdgeInsets.only(bottom: 16),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        '${AppConfig.apiBaseUrl}/image?path=${question.image!}',
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                Text(
+                  'Вопрос ${_currentIndex + 1} из ${questions.length}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  ),
+                ),
+                SizedBox(height: 8),
+                Text(
+                  question.question,
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 24),
+                ...question.answers.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final answer = entry.value;
+                  final isCorrect = index == question.correctIndex;
+                  final isSelected = _selectedAnswer == index;
+
+                  Color? borderColor;
+                  Color? backgroundColor;
+                  IconData? icon;
+                  Color? iconColor;
+
+                  if (_selectedAnswer != null) {
+                    if (isCorrect) {
+                      borderColor = Colors.green;
+                      backgroundColor = Colors.green.withOpacity(0.1);
+                      icon = Icons.check;
+                      iconColor = Colors.green;
+                    } else if (isSelected) {
+                      borderColor = Colors.red;
+                      backgroundColor = Colors.red.withOpacity(0.1);
+                      icon = Icons.close;
+                      iconColor = Colors.red;
+                    }
+                  }
+
+                  return Padding(
+                    padding: EdgeInsets.only(bottom: 12),
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(
+                          color: borderColor ?? Theme.of(context).colorScheme.outline,
+                        ),
+                        backgroundColor: backgroundColor,
+                        padding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                        alignment: Alignment.centerLeft,
+                      ),
+                      onPressed: _selectedAnswer == null
+                          ? () => _handleAnswer(index, question)
+                          : null,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              answer,
+                              style: Theme.of(context).textTheme.bodyLarge,
+                            ),
+                          ),
+                          if (icon != null)
+                            Icon(icon, size: 20, color: iconColor),
+                        ],
+                      ),
+                    ),
+                  );
+                }).toList(),
+                if (_selectedAnswer != null) ...[
+                  SizedBox(height: 24),
+                  Card(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    margin: EdgeInsets.zero,
+                    child: Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            'Объяснение:',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            question.explanation,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton(
+                        onPressed: _nextQuestion,
+                        child: Text('Следующий вопрос'),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          question.isFavorite ? Icons.star : Icons.star_border,
+                          color: Colors.amber,
+                        ),
+                        onPressed: () => _toggleFavorite(question),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// lib/features/ticket/ui/ticket_page.dart
+import 'package:flutter/material.dart';
+import 'package:impulse/core/services/api_client.dart';
+import 'package:impulse/data/models/question_model.dart';
+
+class TicketPage extends StatefulWidget {
+  final String title;
+  final Future<List<QuestionModel>> Function(ApiClient) loader;
+  final String? telegramUserId;
+  final int? startFromIndex;
+
+  const TicketPage({
+    super.key,
+    required this.title,
+    required this.loader,
+    this.telegramUserId,
+    this.startFromIndex,
+  });
+
+  @override
+  State<TicketPage> createState() => _TicketPageState();
+}
+
+class _TicketPageState extends State<TicketPage> {
+  late final ApiClient _client;
+  late Future<List<QuestionModel>> _questionsFuture;
+  int _currentIndex = 0;
+  int? _selectedAnswer;
+  List<QuestionModel>? _questions;
+
+  @override
+  void initState() {
+    super.initState();
+    _client = ApiClient(userId: widget.telegramUserId);
+    _questionsFuture = widget.loader(_client);
+    if (widget.startFromIndex != null) {
+      _currentIndex = widget.startFromIndex!;
+    }
+  }
+
+  void _nextQuestion() {
+    setState(() {
+      _currentIndex++;
+      _selectedAnswer = null;
+    });
+  }
+
+  void _handleAnswer(int index, QuestionModel question) async {
+    setState(() => _selectedAnswer = index);
+
+    try {
+      final isCorrect = index == question.correctIndex;
+      await _client.trackQuestionAnswer(question.id, isCorrect);
+
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+    }
+  }
+
+  Future<void> _toggleFavorite(QuestionModel question) async {
+    try {
+      await _client.toggleFavorite(question.id, !question.isFavorite);
+      setState(() {
+        question.isFavorite = !question.isFavorite;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            question.isFavorite
+                ? 'Добавлено в избранное'
+                : 'Удалено из избранного',
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Ошибка: $e')));
+    }
+  }
+
+  Widget _buildQuestionNavigation() {
+    if (_questions == null) return const SizedBox();
+
+    return SizedBox(
+      height: 50,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        itemCount: _questions!.length,
+        itemBuilder: (context, index) {
+          final question = _questions![index];
+          bool isAnswered = question.wasAnsweredCorrectly != null;
+          bool isCorrect = question.wasAnsweredCorrectly == true;
+
+          return GestureDetector(
+            onTap: () {
+              setState(() {
+                _currentIndex = index;
+                _selectedAnswer = null;
+              });
+            },
+            child: Container(
+              width: 40,
+              height: 40,
+              margin: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color:
+                    _currentIndex == index
+                        ? Colors.blue
+                        : isAnswered
+                        ? isCorrect
+                            ? Colors.green
+                            : Colors.red
+                        : Colors.grey[300],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Center(
+                child: Text(
+                  '${index + 1}',
+                  style: TextStyle(
+                    color: _currentIndex == index ? Colors.white : Colors.black,
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.title)),
+      body: FutureBuilder<List<QuestionModel>>(
+        future: _questionsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Ошибка: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('Нет вопросов'));
+          }
+
+          _questions = snapshot.data!;
+
+          if (_currentIndex >= _questions!.length) {
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Вы ответили на все вопросы!'),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Вернуться назад'),
+                  ),
+                ],
+              ),
+            );
+          }
+
+          final question = _questions![_currentIndex];
+          return Column(
+            children: [
+              _buildQuestionNavigation(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (question.image != null && question.image!.isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: Image.network(
+                              '${AppConfig.apiBaseUrl}/image?path=${question.image!}',
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      Text(
+                        'Вопрос ${_currentIndex + 1} из ${_questions?.length}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSurface.withOpacity(0.6),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        question.question,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      ...question.answers.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final answer = entry.value;
+                        final isCorrect = index == question.correctIndex;
+                        final isSelected = _selectedAnswer == index;
+
+                        Color? borderColor;
+                        Color? backgroundColor;
+                        IconData? icon;
+                        Color? iconColor;
+
+                        if (_selectedAnswer != null) {
+                          if (isCorrect) {
+                            borderColor = Colors.green;
+                            backgroundColor = Colors.green.withOpacity(0.1);
+                            icon = Icons.check;
+                            iconColor = Colors.green;
+                          } else if (isSelected) {
+                            borderColor = Colors.red;
+                            backgroundColor = Colors.red.withOpacity(0.1);
+                            icon = Icons.close;
+                            iconColor = Colors.red;
+                          }
+                        }
+
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: OutlinedButton(
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(
+                                color:
+                                    borderColor ??
+                                    Theme.of(context).colorScheme.outline,
+                              ),
+                              backgroundColor: backgroundColor,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 16,
+                                horizontal: 16,
+                              ),
+                              alignment: Alignment.centerLeft,
+                            ),
+                            onPressed:
+                                _selectedAnswer == null
+                                    ? () => _handleAnswer(index, question)
+                                    : null,
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    answer,
+                                    style:
+                                        Theme.of(context).textTheme.bodyLarge,
+                                  ),
+                                ),
+                                if (icon != null)
+                                  Icon(icon, size: 20, color: iconColor),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                      if (_selectedAnswer != null) ...[
+                        const SizedBox(height: 24),
+                        Card(
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.primary.withOpacity(0.1),
+                          margin: EdgeInsets.zero,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  'Объяснение:',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodySmall?.copyWith(
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  question.explanation,
+                                  style: Theme.of(context).textTheme.bodyMedium,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            ElevatedButton(
+                              onPressed: _nextQuestion,
+                              child: const Text('Следующий вопрос'),
+                            ),
+                            IconButton(
+                              icon: Icon(
+                                question.isFavorite
+                                    ? Icons.star
+                                    : Icons.star_border,
+                                color: Colors.amber,
+                              ),
+                              onPressed: () => _toggleFavorite(question),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+import 'package:flutter/material.dart';
+
+class AppTheme {
+  static const Color primaryColor = Color(0xFF4CAF50); // Зеленый
+  static const Color primaryDark = Color(0xFF388E3C);
+  static const Color primaryLight = Color(0xFFC8E6C9);
+  static const Color accentColor = Color(0xFFFFC107); // Янтарный
+  static const Color errorColor = Color(0xFFF44336);
+  static const Color successColor = Color(0xFF4CAF50);
+  static const Color warningColor = Color(0xFFFF9800);
+  static const Color backgroundColor = Color(0xFFF5F5F5);
+  static const Color surfaceColor = Colors.white;
+  static const Color onPrimary = Colors.white;
+  static const Color onSurface = Color(0xFF212121);
+
+  static ThemeData get lightTheme {
+    return ThemeData(
+      colorScheme: ColorScheme.light(
+        primary: primaryColor,
+        primaryContainer: primaryDark,
+        secondary: accentColor,
+        surface: surfaceColor,
+        background: backgroundColor,
+        error: errorColor,
+        onPrimary: onPrimary,
+        onSurface: onSurface,
+      ),
+      scaffoldBackgroundColor: backgroundColor,
+      appBarTheme: AppBarTheme(
+        backgroundColor: primaryColor,
+        elevation: 4,
+        centerTitle: true,
+        titleTextStyle: const TextStyle(
+          fontSize: 22,
+          fontWeight: FontWeight.w600,
+          color: onPrimary,
+        ),
+        iconTheme: const IconThemeData(color: onPrimary),
+        actionsIconTheme: const IconThemeData(color: onPrimary),
+      ),
+      cardTheme: CardTheme(
+        elevation: 2,
+        margin: const EdgeInsets.all(8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: primaryColor,
+          foregroundColor: onPrimary,
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          foregroundColor: primaryColor,
+        ),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: primaryColor,
+        foregroundColor: onPrimary,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+      textTheme: const TextTheme(
+        displayLarge: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+        displayMedium: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+        headlineMedium: TextStyle(fontSize: 22, fontWeight: FontWeight.w600),
+        titleLarge: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+        bodyLarge: TextStyle(fontSize: 16),
+        bodyMedium: TextStyle(fontSize: 14),
+      ),
+      useMaterial3: true,
+    );
+  }
+}
+
+import 'dart:html' as html;
+import 'dart:js' as js; // Добавляем JS интероп
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb, kDebugMode;
+import 'package:impulse/router.dart';
+import 'package:impulse/core/config.dart';
+
+import 'package:flutter_web_plugins/url_strategy.dart';
+import 'app_theme.dart';
+import 'core/services/api_client.dart';
+import 'features/home/ui/main_menu_page.dart';
+
+void main() {
+  setUrlStrategy(PathUrlStrategy());
+  runApp(const ImpulseApp());
+}
+
+class ImpulseApp extends StatefulWidget {
+  const ImpulseApp({super.key});
+
+  @override
+  State<ImpulseApp> createState() => _ImpulseAppState();
+}
+
+class _ImpulseAppState extends State<ImpulseApp> {
+  String? _telegramInitData;
+  String? _telegramUserId;
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeApp();
+  }
+
+  Future<void> _initializeApp() async {
+    try {
+      if (kIsWeb) {
+        await _initTelegramWebApp();
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+      debugPrint('Initialization error: $e');
+    }
+  }
+
+  Future<void> _initTelegramWebApp() async {
+    try {
+      final initData = kDebugMode ? _getDebugInitData() : _getProductionInitData();
+      if (initData == null) {
+        throw Exception('Telegram init data not available');
+      }
+
+      final userId = _extractTelegramUserId(initData);
+      if (userId == null) {
+        throw Exception('Failed to extract user ID');
+      }
+
+      setState(() {
+        _telegramInitData = initData;
+        _telegramUserId = userId;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+      rethrow;
+    }
+  }
+
+  String? _getProductionInitData() {
+    try {
+      // Получаем данные через JS интероп
+      final jsContext = js.context;
+      if (jsContext.hasProperty('Telegram') &&
+          jsContext['Telegram'].hasProperty('WebApp') &&
+          jsContext['Telegram']['WebApp'].hasProperty('initData')) {
+        return jsContext['Telegram']['WebApp']['initData'] as String?;
+      }
+
+      // Альтернативный способ - из query параметров
+      final uri = Uri.base;
+      return uri.queryParameters['tgWebAppData'];
+    } catch (e) {
+      debugPrint('Error getting production init data: $e');
+      return null;
+    }
+  }
+
+  String _getDebugInitData() {
+    // Заглушка для разработки
+    return 'query_id%3Ddebug%26user%3D%257B%2522id%2522%253A123456789%252C%2522first_name%2522%253A%2522Dev%2522%257D%26auth_date%3D9999999999%26hash%3Dfake';
+  }
+
+  String? _extractTelegramUserId(String data) {
+    try {
+      final decoded = Uri.decodeFull(data);
+      final userParam = RegExp(r'user=([^&]+)').firstMatch(decoded)?.group(1);
+      if (userParam == null) return null;
+
+      final userJsonRaw = Uri.decodeFull(Uri.decodeFull(userParam));
+      final map = json.decode(userJsonRaw) as Map<String, dynamic>;
+      return map['id'].toString();
+    } catch (e) {
+      debugPrint('Failed to parse telegram user id: $e');
+      return null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Impulse',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      initialRoute: '/',
+      home: _buildHomeScreen(),
+      onGenerateRoute: (settings) => AppRouter.generateRoute(
+        settings,
+        telegramInitData: _telegramInitData,
+        telegramUserId: _telegramUserId,
+      ),
+    );
+  }
+
+  Widget _buildHomeScreen() {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Error: $_error'),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: _initializeApp,
+                child: const Text('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return MainMenuPage(
+      userId: _telegramUserId,
+    );
+  }
+}
+
+import 'package:flutter/material.dart';
+import 'package:impulse/features/home/ui/main_menu_page.dart';
+
+class AppRouter {
+  static Route<dynamic> generateRoute(
+      RouteSettings settings, {
+        String? telegramInitData,
+        String? telegramUserId, // Единое именование параметра
+      }) {
+    switch (settings.name) {
+      case '/':
+        return MaterialPageRoute(
+          builder: (_) => MainMenuPage(
+            userId: telegramUserId, // Правильное имя параметра
+          ),
+        );
+      default:
+        return MaterialPageRoute(
+          builder: (_) => Scaffold(
+            body: Center(
+              child: Text('Route not found: ${settings.name}'),
+            ),
+          ),
+        );
+    }
+  }
+}

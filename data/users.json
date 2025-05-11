@@ -1,0 +1,121 @@
+[
+  {
+    "id": "1",
+    "telegram_id": "123456789",
+    "username": "",
+    "first_name": "User",
+    "created_at": "2025-05-09T11:37:13.668324",
+    "favorites": [
+      "11_60"
+    ],
+    "answers": [
+      {
+        "question_id": "5_0",
+        "is_correct": true,
+        "timestamp": "2025-05-09T11:37:24.838002"
+      },
+      {
+        "question_id": "1_1",
+        "is_correct": true,
+        "timestamp": "2025-05-09T11:37:53.936249"
+      },
+      {
+        "question_id": "11_7",
+        "is_correct": false,
+        "timestamp": "2025-05-09T15:17:51.449859"
+      },
+      {
+        "question_id": "5_1",
+        "is_correct": false,
+        "timestamp": "2025-05-09T15:17:59.006599"
+      },
+      {
+        "question_id": "1_0",
+        "is_correct": false,
+        "timestamp": "2025-05-09T15:18:02.838282"
+      },
+      {
+        "question_id": "18_10",
+        "is_correct": true,
+        "timestamp": "2025-05-09T15:20:09.157276"
+      },
+      {
+        "question_id": "1_2",
+        "is_correct": false,
+        "timestamp": "2025-05-09T15:21:55.511527"
+      },
+      {
+        "question_id": "18_107",
+        "is_correct": false,
+        "timestamp": "2025-05-09T19:48:50.934400"
+      },
+      {
+        "question_id": "35_267",
+        "is_correct": true,
+        "timestamp": "2025-05-09T19:48:54.587906"
+      },
+      {
+        "question_id": "35_101",
+        "is_correct": false,
+        "timestamp": "2025-05-09T19:49:04.365632"
+      },
+      {
+        "question_id": "3_0",
+        "is_correct": true,
+        "timestamp": "2025-05-09T19:49:48.451252"
+      },
+      {
+        "question_id": "1_3",
+        "is_correct": true,
+        "timestamp": "2025-05-10T12:48:50.619571"
+      },
+      {
+        "question_id": "11_60",
+        "is_correct": false,
+        "timestamp": "2025-05-10T18:18:29.015428"
+      }
+    ]
+  },
+  {
+    "id": "2",
+    "telegram_id": "634711424",
+    "username": "",
+    "first_name": "User",
+    "created_at": "2025-05-09T14:01:43.430473",
+    "favorites": [],
+    "answers": [
+      {
+        "question_id": "1_0",
+        "is_correct": true,
+        "timestamp": "2025-05-09T14:02:20.549665"
+      },
+      {
+        "question_id": "1_1",
+        "is_correct": true,
+        "timestamp": "2025-05-09T14:02:27.917347"
+      },
+      {
+        "question_id": "1_2",
+        "is_correct": true,
+        "timestamp": "2025-05-09T14:02:37.774538"
+      }
+    ]
+  },
+  {
+    "id": "3",
+    "telegram_id": "100471066963723348570",
+    "username": "",
+    "first_name": "User",
+    "created_at": "2025-05-11T13:57:17.973167",
+    "favorites": [
+      "1_0"
+    ],
+    "answers": [
+      {
+        "question_id": "1_0",
+        "is_correct": false,
+        "timestamp": "2025-05-11T14:13:25.021421"
+      }
+    ]
+  }
+]
