@@ -117,5 +117,20 @@
         "timestamp": "2025-05-11T14:13:25.021421"
       }
     ]
+  },
+  {
+    "id": "4",
+    "telegram_id": null,
+    "username": "",
+    "first_name": "User",
+    "created_at": "2025-05-12T11:33:54.525250",
+    "favorites": [],
+    "answers": [
+      {
+        "question_id": "1_0",
+        "is_correct": false,
+        "timestamp": "2025-05-12T20:37:08.077405"
+      }
+    ]
   }
 ]

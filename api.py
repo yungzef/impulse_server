@@ -1,4 +1,4 @@
-# application.py — исправленная версия
+# api.py — исправленная версия
 
 from fastapi import FastAPI, HTTPException, Query, Request, Form, Body
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,8 +14,6 @@ import hashlib, hmac, urllib.parse
 import uvicorn
 
 app = FastAPI()
-
-application = app
 
 app.add_middleware(
     CORSMiddleware,
@@ -248,7 +246,6 @@ async def get_random_questions(telegram_id: Optional[str] = None):
                 question["is_favorite"] = question["id"] in user_favorites
 
     return questions
-
 
 @app.get("/user/errors")
 async def get_error_questions(telegram_id: str):
@@ -539,4 +536,4 @@ def load_all_themes() -> List[Dict]:
     return themes
 
 if __name__ == "__main__":
-    uvicorn.run("api:app", host="127.0.0.1", port=8000, reload=True)
+    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)
