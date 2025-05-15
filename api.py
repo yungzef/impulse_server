@@ -1,6 +1,4 @@
-# api.py — исправленная версия
-
-from fastapi import FastAPI, HTTPException, Query, Request, Form, Body
+from fastapi import FastAPI, HTTPException, Query, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
@@ -10,7 +8,7 @@ import os
 import glob
 import random
 from datetime import datetime
-import hashlib, hmac, urllib.parse
+import sqlite3
 import uvicorn
 
 app = FastAPI()
@@ -26,154 +24,161 @@ app.add_middleware(
 DATA_DIR = "data"
 THEMES_DIR = os.path.join(DATA_DIR, "themes")
 IMAGES_DIR = os.path.join(DATA_DIR, "output_images")
-USERS_FILE = os.path.join(DATA_DIR, "users.json")
-BOT_TOKEN = "7788226951:AAEQDNKMq-THOs3CrHaGTRS7xZmOrlSZDv0"
+DB_FILE = os.path.join(DATA_DIR, "impulse_pdr.db")
 
 os.makedirs(THEMES_DIR, exist_ok=True)
 os.makedirs(IMAGES_DIR, exist_ok=True)
-if not os.path.exists(USERS_FILE):
-    with open(USERS_FILE, "w") as f:
-        json.dump([], f)
 
 
-class TelegramAuthPayload(BaseModel):
-    id: str
-    first_name: str
-    username: str = ""
-    hash: str
-    auth_date: str
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
 
-class AnswerPayload(BaseModel):
-    question_id: int
+    # Create users table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT UNIQUE,
+        username TEXT,
+        first_name TEXT,
+        photo_url TEXT,
+        created_at TEXT,
+        last_login TEXT
+    )
+    ''')
+
+    # Create answers table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS answers (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT,
+        question_id TEXT,
+        is_correct INTEGER,
+        timestamp TEXT,
+        FOREIGN KEY(user_id) REFERENCES users(user_id)
+    )
+    ''')
+
+    # Create favorites table
+    cursor.execute('''
+    CREATE TABLE IF NOT EXISTS favorites (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id TEXT,
+        question_id TEXT,
+        FOREIGN KEY(user_id) REFERENCES users(user_id),
+        UNIQUE(user_id, question_id)
+    )
+    ''')
+
+    conn.commit()
+    conn.close()
+
+init_db()
+
+
+class UserAnswerPayload(BaseModel):
+    question_id: str
     is_correct: bool
-    telegram_id: str
+    user_id: str
+
 
 class FavoritePayload(BaseModel):
-    question_id: int
-    telegram_id: str
+    question_id: str
+    user_id: str
 
-def verify_telegram_auth(payload: dict, token: str):
-    auth_hash = payload.pop("hash")
-    data_check_string = "\n".join([f"{k}={v}" for k, v in sorted(payload.items())])
-    secret_key = hmac.new(token.encode(), msg=b"", digestmod=hashlib.sha256).digest()
-    calc_hash = hmac.new(secret_key, data_check_string.encode(), hashlib.sha256).hexdigest()
-    return hmac.compare_digest(calc_hash, auth_hash)
-
-
-def load_json(file_path: str) -> List[Dict]:
-    with open(file_path, "r", encoding="utf-8") as f:
-        return json.load(f)
-
-
-def save_json(file_path: str, data: List[Dict]):
-    with open(file_path, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-
-def ensure_user_exists(telegram_id: str):
-    """Создаёт пользователя, если его нет"""
-    users = load_json(USERS_FILE)
-    user = next((u for u in users if u["telegram_id"] == telegram_id), None)
-
-    if not user:
-        users.append({
-            "id": str(len(users) + 1),
-            "telegram_id": telegram_id,
-            "username": "",
-            "first_name": "User",
-            "created_at": datetime.utcnow().isoformat(),
-            "favorites": [],
-            "answers": []
-        })
-        save_json(USERS_FILE, users)
 
 @app.get("/")
 def read_root():
     return {"message": "API works"}
 
+@app.get("/debug/user")
+async def debug_user(user_id: str = Query(...)):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM users WHERE user_id = ?", (user_id,))
+    user = cursor.fetchone()
+    conn.close()
+    return {"user": user}
 
-@app.get("/auth/telegram")
-async def auth_telegram(
-        request: Request,
-        tgWebAppData: str = Query(...),
-        tgWebAppVersion: str = Query(None),
-        tgWebAppPlatform: str = Query(None),
+
+@app.get("/search/questions")
+async def search_questions(
+        query: str = Query(..., min_length=1),
+        user_id: Optional[str] = None
 ):
+    """Поиск вопросов по тексту"""
     try:
-        parsed_data = dict(urllib.parse.parse_qsl(tgWebAppData))
+        query = query.lower().strip()
+        results = []
 
-        if not verify_telegram_auth(parsed_data.copy(), BOT_TOKEN):
-            raise HTTPException(status_code=401, detail="Invalid Telegram auth")
+        for theme in load_all_themes():
+            for idx, q in enumerate(theme.get("questions", [])):
+                # Безопасное получение полей с проверкой на None
+                question_text = (q.get("question", "") or "").lower()
+                answers = " ".join(q.get("answers", []) or []).lower()
+                explanation = (q.get("explanation", "") or "").lower()
+                theme_name = (theme.get("name", "") or "Unknown")
 
-        user_data = json.loads(parsed_data.get("user", "{}"))
+                if (query in question_text or
+                        query in answers or
+                        query in explanation):
+                    question = q.copy()
+                    question_id = f"{theme['index']}_{idx}"
+                    question["id"] = question_id
+                    question["theme_name"] = theme_name
 
-        users = load_json(USERS_FILE)
-        user_exists = any(u.get("telegram_id") == str(user_data.get("id")) for u in users)
+                    if user_id:
+                        conn = sqlite3.connect(DB_FILE)
+                        cursor = conn.cursor()
 
-        if not user_exists:
-            users.append({
-                "id": str(len(users) + 1),
-                "telegram_id": str(user_data.get("id")),
-                "username": user_data.get("username"),
-                "first_name": user_data.get("first_name"),
-                "photo_url": user_data.get("photo_url"),
-                "created_at": datetime.utcnow().isoformat(),
-                "favorites": [],
-                "answers": []
-            })
-            save_json(USERS_FILE, users)
+                        # Проверка ответа
+                        cursor.execute(
+                            "SELECT is_correct FROM answers WHERE user_id = ? AND question_id = ?",
+                            (user_id, question_id)
+                        )
+                        answer = cursor.fetchone()
+                        question["was_answered_correctly"] = answer[0] if answer else None
 
-        return {"status": "authenticated", "user_id": user_data.get("id")}
+                        # Проверка избранного
+                        cursor.execute(
+                            "SELECT 1 FROM favorites WHERE user_id = ? AND question_id = ?",
+                            (user_id, question_id)
+                        )
+                        question["is_favorite"] = cursor.fetchone() is not None
+
+                        conn.close()
+
+                    results.append(question)
+
+        return {"results": results}
 
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@app.post("/auth")
-async def auth_user(data: TelegramAuthPayload):
-    if not verify_telegram_auth(data.dict().copy(), BOT_TOKEN):
-        raise HTTPException(status_code=401, detail="Invalid Telegram login")
-
-    users = load_json(USERS_FILE)
-    user_exists = any(user["telegram_id"] == data.id for user in users)
-
-    if not user_exists:
-        users.append({
-            "id": str(len(users) + 1),
-            "telegram_id": data.id,
-            "username": data.username,
-            "first_name": data.first_name,
-            "created_at": datetime.utcnow().isoformat(),
-            "favorites": [],
-            "answers": []
-        })
-        save_json(USERS_FILE, users)
-
-    return {"status": "ok"}
-
+        print(f"Search error: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Search failed: {str(e)}"
+        )
 
 @app.get("/image")
 async def get_image(
-        path: str = Query(..., description="Относительный путь к изображению, например 'output_images/01_01.jpeg'")):
-    # Безопасная обработка пути к изображению
+        path: str = Query(..., description="Relative path to image, e.g. 'output_images/01_01.jpeg'")):
     safe_path = os.path.normpath(path).lstrip('/')
     image_path = os.path.join(IMAGES_DIR, os.path.basename(safe_path))
 
     if not os.path.isfile(image_path):
-        # Попробуем найти похожий файл (на случай различий в регистре)
         image_name = os.path.basename(safe_path).lower()
         for file in os.listdir(IMAGES_DIR):
             if file.lower() == image_name:
                 image_path = os.path.join(IMAGES_DIR, file)
                 break
         else:
-            raise HTTPException(status_code=404, detail="Изображение не найдено")
+            raise HTTPException(status_code=404, detail="Image not found")
 
     return FileResponse(image_path, media_type="image/jpeg")
 
 
 @app.get("/themes")
-async def get_themes(telegram_id: Optional[str] = None):
+async def get_themes(user_id: Optional[str] = None):
     themes = []
     for file in glob.glob(os.path.join(THEMES_DIR, "*.json")):
         with open(file, "r", encoding="utf-8") as f:
@@ -187,7 +192,7 @@ async def get_themes(telegram_id: Optional[str] = None):
 
 
 @app.get("/themes/{theme_id}")
-async def get_theme_by_id(theme_id: int, telegram_id: str = None):
+async def get_theme_by_id(theme_id: int, user_id: str = None):
     theme_file = os.path.join(THEMES_DIR, f"theme_{theme_id}.json")
     if not os.path.exists(theme_file):
         raise HTTPException(status_code=404, detail="Theme not found")
@@ -201,14 +206,26 @@ async def get_theme_by_id(theme_id: int, telegram_id: str = None):
             question_id = f"{theme_id}_{idx}"
             question["id"] = question_id
 
-            if telegram_id:
-                users = load_json(USERS_FILE)
-                user = next((u for u in users if u["telegram_id"] == telegram_id), None)
-                if user:
-                    user_answers = {a["question_id"]: a["is_correct"]
-                                    for a in user.get("answers", [])}
-                    question["was_answered_correctly"] = user_answers.get(question_id)
-                    question["is_favorite"] = question_id in user.get("favorites", [])
+            if user_id:
+                conn = sqlite3.connect(DB_FILE)
+                cursor = conn.cursor()
+
+                # Check if question was answered
+                cursor.execute(
+                    "SELECT is_correct FROM answers WHERE user_id = ? AND question_id = ?",
+                    (user_id, question_id)
+                )
+                answer = cursor.fetchone()
+                question["was_answered_correctly"] = answer[0] if answer else None
+
+                # Check if question is favorite
+                cursor.execute(
+                    "SELECT 1 FROM favorites WHERE user_id = ? AND question_id = ?",
+                    (user_id, question_id)
+                )
+                question["is_favorite"] = cursor.fetchone() is not None
+
+                conn.close()
 
             questions.append(question)
 
@@ -219,8 +236,9 @@ async def get_theme_by_id(theme_id: int, telegram_id: str = None):
             "questions": questions
         }
 
+
 @app.get("/ticket/random")
-async def get_random_questions(telegram_id: Optional[str] = None):
+async def get_random_questions(user_id: Optional[str] = None):
     all_questions = []
     for file in glob.glob(os.path.join(THEMES_DIR, "*.json")):
         with open(file, "r", encoding="utf-8") as f:
@@ -234,89 +252,121 @@ async def get_random_questions(telegram_id: Optional[str] = None):
 
     questions = random.sample(all_questions, min(20, len(all_questions)))
 
-    if telegram_id:
-        users = load_json(USERS_FILE)
-        user = next((u for u in users if u["telegram_id"] == telegram_id), None)
-        if user:
-            user_answers = {a["question_id"]: a["is_correct"] for a in user.get("answers", [])}
-            user_favorites = user.get("favorites", [])
+    if user_id:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
 
-            for question in questions:
-                question["was_answered_correctly"] = user_answers.get(question["id"])
-                question["is_favorite"] = question["id"] in user_favorites
+        for question in questions:
+            # Get answer status
+            cursor.execute(
+                "SELECT is_correct FROM answers WHERE user_id = ? AND question_id = ?",
+                (user_id, question["id"])
+            )
+            answer = cursor.fetchone()
+            question["was_answered_correctly"] = answer[0] if answer else None
+
+            # Check if favorite
+            cursor.execute(
+                "SELECT 1 FROM favorites WHERE user_id = ? AND question_id = ?",
+                (user_id, question["id"])
+            )
+            question["is_favorite"] = cursor.fetchone() is not None
+
+        conn.close()
 
     return questions
 
+
 @app.get("/user/errors")
-async def get_error_questions(telegram_id: str):
-    users = load_json(USERS_FILE)
-    user = next((u for u in users if u["telegram_id"] == telegram_id), None)
+async def get_error_questions(user_id: str = Query(..., min_length=1)):
+    """Получение ошибок пользователя"""
+    print(f"Request to /user/errors with user_id: {user_id}")  # Логирование
+    if not user_id:
+        raise HTTPException(status_code=400, detail="user_id is required")
 
-    if not user:
-        return {"questions": []}
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
 
-    error_ids = [a["question_id"] for a in user.get("answers", [])
-                 if not a["is_correct"]]
+        # Всегда возвращаем dict с полем 'questions'
+        if not user_id:
+            return {"questions": []}
 
-    error_questions = []
+        cursor.execute(
+            "SELECT question_id FROM answers WHERE user_id = ? AND is_correct = 0",
+            (user_id,)
+        )
+        error_ids = [row[0] for row in cursor.fetchall()]
+
+        questions = []
+        for theme in load_all_themes():
+            for idx, q in enumerate(theme.get("questions", [])):
+                qid = f"{theme['index']}_{idx}"
+                if qid in error_ids:
+                    question = q.copy()
+                    question["id"] = qid
+                    questions.append(question)
+
+        return {"questions": questions}  # Гарантированно возвращаем словарь с списком
+
+    except Exception as e:
+        print(f"Error in /user/errors: {str(e)}")
+        return {"questions": []}  # Возвращаем пустой список при ошибке
+    finally:
+        conn.close()
+
+@app.get("/debug/answers")
+async def debug_all_answers():
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM answers")
+        columns = [column[0] for column in cursor.description]
+        answers = [dict(zip(columns, row)) for row in cursor.fetchall()]
+        conn.close()
+        return {"answers": answers}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/user/favorites")
+async def get_favorites(user_id: str):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
+
+    # Get all favorite question IDs for user
+    cursor.execute(
+        "SELECT question_id FROM favorites WHERE user_id = ?",
+        (user_id,)
+    )
+    favorite_ids = [row[0] for row in cursor.fetchall()]
+
+    favorites = []
     for theme in load_all_themes():
         for idx, q in enumerate(theme.get("questions", [])):
             question_id = f"{theme['index']}_{idx}"
-            if question_id in error_ids:
-                error_questions.append({
-                    "id": question_id,
-                    "question": q.get("question", ""),
-                    "answers": q.get("answers", []),
-                    "correct_answer": q.get("correct_answer", ""),
-                    "correct_index": q.get("correct_index", 0),
-                    "image": q.get("image"),
-                    "explanation": q.get("explanation", ""),
-                    "is_favorite": question_id in user.get("favorites", []),
-                    "was_answered_correctly": False
-                })
+            if question_id in favorite_ids:
+                question = q.copy()
+                question["id"] = question_id
+                question["is_favorite"] = True
 
-    return {"questions": error_questions}
+                # Get answer status
+                cursor.execute(
+                    "SELECT is_correct FROM answers WHERE user_id = ? AND question_id = ?",
+                    (user_id, question_id)
+                )
+                answer = cursor.fetchone()
+                # Convert SQLite's 0/1 to bool or None if not answered
+                question["was_answered_correctly"] = bool(answer[0]) if answer else None
 
+                favorites.append(question)
 
-@app.get("/user/favorites")
-async def get_favorites(telegram_id: str):
-    users = load_json(USERS_FILE)
-    user = next((u for u in users if u["telegram_id"] == telegram_id), None)
-
-    if not user:
-        return []
-
-    favorites = user.get("favorites", [])
-    result = []
-
-    # Ищем вопросы во всех темах
-    for theme_file in glob.glob(os.path.join(THEMES_DIR, "*.json")):
-        with open(theme_file, "r", encoding="utf-8") as f:
-            theme = json.load(f)
-            theme_index = theme["index"]
-            for idx, q in enumerate(theme.get("questions", [])):
-                question_id = f"{theme_index}_{idx}"
-                if question_id in favorites:
-                    question = q.copy()
-                    question["id"] = question_id
-                    question["is_favorite"] = True
-                    # Добавляем информацию о правильности ответа
-                    user_answer = next(
-                        (a for a in user.get("answers", [])
-                         if a["question_id"] == question_id),
-                        None
-                    )
-                    if user_answer:
-                        question["was_answered_correctly"] = user_answer["is_correct"]
-                    result.append(question)
-
-    return result
-
+    conn.close()
+    return favorites
 
 @app.post("/user/favorites/add")
 async def add_favorite(
         request: Request,
-        telegram_id: str = Query(...),
+        user_id: str = Query(...),
 ):
     try:
         data = await request.json()
@@ -325,19 +375,23 @@ async def add_favorite(
         if not question_id:
             raise HTTPException(status_code=400, detail="question_id is required")
 
-        users = load_json(USERS_FILE)
-        user = next((u for u in users if u["telegram_id"] == telegram_id), None)
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
 
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+        # Ensure user exists
+        cursor.execute(
+            "INSERT OR IGNORE INTO users (user_id, first_name, created_at) VALUES (?, ?, ?)",
+            (user_id, "User", datetime.utcnow().isoformat())
+        )
 
-        if "favorites" not in user:
-            user["favorites"] = []
+        # Add favorite
+        cursor.execute(
+            "INSERT OR IGNORE INTO favorites (user_id, question_id) VALUES (?, ?)",
+            (user_id, question_id)
+        )
 
-        if question_id not in user["favorites"]:
-            user["favorites"].append(question_id)
-
-        save_json(USERS_FILE, users)
+        conn.commit()
+        conn.close()
         return {"status": "ok", "message": "Favorite added"}
 
     except Exception as e:
@@ -347,7 +401,7 @@ async def add_favorite(
 @app.post("/user/favorites/remove")
 async def remove_favorite(
         request: Request,
-        telegram_id: str = Query(...),
+        user_id: str = Query(...),
 ):
     try:
         data = await request.json()
@@ -356,144 +410,123 @@ async def remove_favorite(
         if not question_id:
             raise HTTPException(status_code=400, detail="question_id is required")
 
-        users = load_json(USERS_FILE)
-        user = next((u for u in users if u["telegram_id"] == telegram_id), None)
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
 
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
+        cursor.execute(
+            "DELETE FROM favorites WHERE user_id = ? AND question_id = ?",
+            (user_id, question_id)
+        )
 
-        if "favorites" in user and question_id in user["favorites"]:
-            user["favorites"].remove(question_id)
-
-        save_json(USERS_FILE, users)
+        conn.commit()
+        conn.close()
         return {"status": "ok", "message": "Favorite removed"}
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
-# Изменяем метод submit_answer
 @app.post("/user/answer")
-async def submit_answer(
-        data: dict = Body(...)  # Принимаем JSON данные
-):
+async def submit_answer(request: Request):
     try:
-        # Проверяем обязательные поля
-        if not all(key in data for key in ['question_id', 'is_correct', 'telegram_id']):
-            raise HTTPException(status_code=400, detail="Missing required fields")
+        data = await request.json()
+        print(f"Received answer: {data}")
 
-        users = load_json(USERS_FILE)
-        user = next((u for u in users if u["telegram_id"] == data['telegram_id']), None)
+        # Проверка данных
+        if not all(k in data for k in ['user_id', 'question_id', 'is_correct']):
+            raise HTTPException(status_code=400, detail="Missing fields")
 
-        if not user:
-            user = {
-                "id": str(len(users) + 1),
-                "telegram_id": data['telegram_id'],
-                "username": "",
-                "first_name": "User",
-                "created_at": datetime.utcnow().isoformat(),
-                "favorites": [],
-                "answers": []
-            }
-            users.append(user)
+        # Подключение к БД
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
 
-        # Обновляем ответы
-        user["answers"] = [a for a in user.get("answers", [])
-                           if a["question_id"] != data['question_id']]
+        # Добавляем пользователя, если его нет
+        cursor.execute(
+            "INSERT OR IGNORE INTO users (user_id, created_at) VALUES (?, ?)",
+            (data['user_id'], datetime.utcnow().isoformat())
+        )
 
-        user["answers"].append({
-            "question_id": data['question_id'],
-            "is_correct": data['is_correct'],
-            "timestamp": datetime.utcnow().isoformat()
-        })
+        # Сохраняем ответ
+        cursor.execute(
+            """INSERT INTO answers (user_id, question_id, is_correct, timestamp)
+               VALUES (?, ?, ?, ?)""",
+            (data['user_id'], data['question_id'], int(data['is_correct']), datetime.utcnow().isoformat()))
 
-        save_json(USERS_FILE, users)
+        conn.commit()
+        conn.close()
+
         return {"status": "success"}
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
+        print(f"Error in submit_answer: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/user/progress")
-async def get_progress(telegram_id: str = Query(...)):
-    users = load_json(USERS_FILE)
-    user = next((u for u in users if u["telegram_id"] == telegram_id), None)
+async def get_progress(user_id: str = Query(...)):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
 
-    if not user:
-        return {
-            "total": 0,
-            "correct": 0,
-            "wrong": 0,
-            "accuracy": 0.0
-        }
+    # Get total answers count
+    cursor.execute(
+        "SELECT COUNT(*) FROM answers WHERE user_id = ?",
+        (user_id,)
+    )
+    total = cursor.fetchone()[0]
 
-    answers = user.get("answers", [])
-    total = len(answers)
-    correct = sum(1 for a in answers if a["is_correct"])
+    # Get correct answers count
+    cursor.execute(
+        "SELECT COUNT(*) FROM answers WHERE user_id = ? AND is_correct = 1",
+        (user_id,)
+    )
+    correct = cursor.fetchone()[0]
+
     wrong = total - correct
     accuracy = correct / total if total > 0 else 0.0
 
+    conn.close()
     return {
         "total": total,
         "correct": correct,
         "wrong": wrong,
-        "accuracy": round(accuracy, 2)  # Округляем до 2 знаков
+        "accuracy": round(accuracy, 2)
     }
-
-# Старые маршруты для обратной совместимости
-@app.get("/ticket/errors")
-async def old_get_error_questions(telegram_id: str):
-    return await get_error_questions(telegram_id)
-
-
-@app.get("/favorites")
-async def old_get_favorites(telegram_id: str):
-    return await get_favorites(telegram_id)
-
-
-@app.post("/favorites/add")
-async def old_add_favorite(data: FavoritePayload):
-    return await add_favorite(data)
-
-
-@app.post("/favorites/remove")
-async def old_remove_favorite(data: FavoritePayload):
-    return await remove_favorite(data)
-
-
-@app.post("/answer")
-async def old_submit_answer(data: AnswerPayload):
-    return await submit_answer(data)
 
 
 @app.get("/theme/progress")
-async def get_theme_progress(theme_id: int, telegram_id: str = Query(...)):
-    users = load_json(USERS_FILE)
-    user = next((u for u in users if u["telegram_id"] == telegram_id), None)
+async def get_theme_progress(theme_id: int, user_id: str = Query(...)):
+    conn = sqlite3.connect(DB_FILE)
+    cursor = conn.cursor()
 
-    if not user:
-        return {
-            "total": 0,
-            "correct": 0,
-            "wrong": 0,
-            "accuracy": 0.0,
-            "last_question": 0
-        }
+    # Get theme answers count
+    cursor.execute(
+        "SELECT COUNT(*) FROM answers WHERE user_id = ? AND question_id LIKE ?",
+        (user_id, f"{theme_id}_%")
+    )
+    total = cursor.fetchone()[0]
 
-    theme_answers = [a for a in user.get("answers", [])
-                     if a["question_id"].startswith(f"{theme_id}_")]
+    # Get correct answers count
+    cursor.execute(
+        "SELECT COUNT(*) FROM answers WHERE user_id = ? AND question_id LIKE ? AND is_correct = 1",
+        (user_id, f"{theme_id}_%")
+    )
+    correct = cursor.fetchone()[0]
 
-    total = len(theme_answers)
-    correct = sum(1 for a in theme_answers if a["is_correct"])
     wrong = total - correct
     accuracy = correct / total if total > 0 else 0.0
 
-    # Находим последний отвеченный вопрос
+    # Get last answered question index
     last_answered = 0
-    for a in theme_answers:
-        q_index = int(a["question_id"].split("_")[1])
-        if q_index > last_answered:
-            last_answered = q_index
+    cursor.execute(
+        "SELECT question_id FROM answers WHERE user_id = ? AND question_id LIKE ? ORDER BY timestamp DESC LIMIT 1",
+        (user_id, f"{theme_id}_%")
+    )
+    last_question = cursor.fetchone()
+    if last_question:
+        try:
+            last_answered = int(last_question[0].split("_")[1])
+        except (IndexError, ValueError):
+            pass
 
+    conn.close()
     return {
         "total": total,
         "correct": correct,
@@ -502,38 +535,54 @@ async def get_theme_progress(theme_id: int, telegram_id: str = Query(...)):
         "last_question": last_answered
     }
 
-@app.get("/progress")
-async def old_get_progress(telegram_id: str):
-    return await get_progress(telegram_id)
 
-# Вспомогательные функции
-def load_users() -> List[Dict]:
-    if not os.path.exists(USERS_FILE):
-        return []
-    with open(USERS_FILE, "r") as f:
-        return json.load(f)
+@app.post("/user/reset")
+async def reset_progress(user_id: str = Query(...)):
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        cursor = conn.cursor()
 
-def save_users(users: List[Dict]):
-    with open(USERS_FILE, "w") as f:
-        json.dump(users, f)
+        # Delete all user answers
+        cursor.execute(
+            "DELETE FROM answers WHERE user_id = ?",
+            (user_id,)
+        )
 
-def get_or_create_user(users: List[Dict], telegram_id: str) -> Dict:
-    user = next((u for u in users if u["telegram_id"] == telegram_id), None)
-    if not user:
-        user = {
-            "telegram_id": telegram_id,
-            "answers": [],
-            "favorites": []
-        }
-        users.append(user)
-    return user
+        # Delete all user favorites
+        cursor.execute(
+            "DELETE FROM favorites WHERE user_id = ?",
+            (user_id,)
+        )
 
+        conn.commit()
+        conn.close()
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/feedback")
+async def send_feedback(
+        feedback: str = Body(...),
+        rating: int = Body(...),
+        user_id: str = Body(...)
+):
+    try:
+        # Here you would typically store feedback in the database
+        # For now we'll just return success
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# Helper functions
 def load_all_themes() -> List[Dict]:
     themes = []
     for file in glob.glob(os.path.join(THEMES_DIR, "*.json")):
         with open(file, "r", encoding="utf-8") as f:
             themes.append(json.load(f))
     return themes
+
 
 if __name__ == "__main__":
     uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)
