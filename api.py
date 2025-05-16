@@ -75,7 +75,6 @@ def init_db():
 
 init_db()
 
-
 class UserAnswerPayload(BaseModel):
     question_id: str
     is_correct: bool
@@ -85,7 +84,6 @@ class UserAnswerPayload(BaseModel):
 class FavoritePayload(BaseModel):
     question_id: str
     user_id: str
-
 
 @app.get("/")
 def read_root():
@@ -100,6 +98,73 @@ async def debug_user(user_id: str = Query(...)):
     conn.close()
     return {"user": user}
 
+@app.get("/users")
+async def get_all_users():
+    """
+    Returns all registered users from the database
+    Response format:
+    {
+        "users": [
+            {
+                "user_id": "string",
+                "username": "string",
+                "first_name": "string",
+                "photo_url": "string",
+                "created_at": "string",
+                "last_login": "string"
+            },
+            ...
+        ]
+    }
+    """
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        conn.row_factory = sqlite3.Row  # To get results as dictionaries
+        cursor = conn.cursor()
+
+        # Get all users with additional stats
+        cursor.execute('''
+        SELECT 
+            u.*,
+            COUNT(DISTINCT a.question_id) as questions_answered,
+            COUNT(DISTINCT f.question_id) as favorites_count
+        FROM users u
+        LEFT JOIN answers a ON u.user_id = a.user_id
+        LEFT JOIN favorites f ON u.user_id = f.user_id
+        GROUP BY u.user_id
+        ORDER BY u.created_at DESC
+        ''')
+
+        users = []
+        for row in cursor.fetchall():
+            user = dict(row)
+            # Convert SQLite Row to dict and format fields
+            users.append({
+                "user_id": user["user_id"],
+                "username": user["username"],
+                "first_name": user["first_name"],
+                "photo_url": user["photo_url"],
+                "created_at": user["created_at"],
+                "last_login": user["last_login"],
+                "stats": {
+                    "questions_answered": user["questions_answered"],
+                    "favorites_count": user["favorites_count"]
+                }
+            })
+
+        conn.close()
+        return {"users": users}
+
+    except sqlite3.Error as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Database error: {str(e)}"
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Unexpected error: {str(e)}"
+        )
 
 @app.get("/search/questions")
 async def search_questions(
@@ -184,9 +249,12 @@ async def get_themes(user_id: Optional[str] = None):
         with open(file, "r", encoding="utf-8") as f:
             theme_data = json.load(f)
             themes.append({
-                "index": theme_data["index"],
-                "name": theme_data["name"],
-                "question_count": len(theme_data.get("questions", []))
+                "index": int(theme_data.get("index", 0)),  # Ensure int
+                "name": str(theme_data.get("name", "")),   # Ensure string
+                "question_count": int(len(theme_data.get("questions", []))),  # Ensure int
+                # Add explicit null checks for optional fields
+                "last_answered_index": theme_data.get("last_answered_index"),
+                "accuracy": theme_data.get("accuracy"),
             })
     return sorted(themes, key=lambda x: x["index"])
 
@@ -216,7 +284,7 @@ async def get_theme_by_id(theme_id: int, user_id: str = None):
                     (user_id, question_id)
                 )
                 answer = cursor.fetchone()
-                question["was_answered_correctly"] = answer[0] if answer else None
+                question["was_answered_correctly"] = bool(answer[0]) if answer else None
 
                 # Check if question is favorite
                 cursor.execute(
