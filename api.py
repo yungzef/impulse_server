@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
@@ -92,13 +93,13 @@ class FavoritePayload(BaseModel):
 def read_root():
     return {"message": "API works"}
 
+load_dotenv()
 
 # Конфигурация
-GOOGLE_CLIENT_ID = "147419489204-mcv45kv1ndceffp1efnn2925cfet1ocb.apps.googleusercontent.com"
-GOOGLE_CLIENT_SECRET = "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"
-GOOGLE_REDIRECT_URI = "http://localhost:8000/auth/google/callback"  # Локальная разработка
-FRONTEND_URI = "http://localhost:64979"
-
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+GOOGLE_REDIRECT_URI = "http://localhost:8000/auth/google/callback"  # https://api.impulsepdr.online/auth/google/callback
+FRONTEND_URI = "http://localhost:64979" # https://impulsepdr.online
 
 @app.get("/auth/google/callback")
 async def google_callback(request: Request):
