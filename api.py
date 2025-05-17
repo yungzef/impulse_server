@@ -10,6 +10,9 @@ import random
 from datetime import datetime
 import sqlite3
 import uvicorn
+from urllib.parse import urlencode
+import requests
+from starlette.responses import RedirectResponse
 
 app = FastAPI()
 
@@ -88,6 +91,74 @@ class FavoritePayload(BaseModel):
 @app.get("/")
 def read_root():
     return {"message": "API works"}
+
+
+# Конфигурация
+GOOGLE_CLIENT_ID = "147419489204-mcv45kv1ndceffp1efnn2925cfet1ocb.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET = "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"
+GOOGLE_REDIRECT_URI = "http://localhost:8000/auth/google/callback"  # Локальная разработка
+FRONTEND_URI = "http://localhost:64979"
+
+
+@app.get("/auth/google/callback")
+async def google_callback(request: Request):
+    # Получаем параметры из URL
+    code = request.query_params.get("code")
+    error = request.query_params.get("error")
+    state = request.query_params.get("state")
+
+    # Обработка ошибок
+    if error:
+        error_description = request.query_params.get("error_description", "")
+        return RedirectResponse(f"{FRONTEND_URI}?error={error}&description={error_description}")
+
+    if not code:
+        return RedirectResponse(f"{FRONTEND_URI}?error=missing_code")
+
+    try:
+        # 1. Обмен кода на токены
+        token_url = "https://oauth2.googleapis.com/token"
+        token_data = {
+            "code": code,
+            "client_id": GOOGLE_CLIENT_ID,
+            "client_secret": GOOGLE_CLIENT_SECRET,
+            "redirect_uri": GOOGLE_REDIRECT_URI,
+            "grant_type": "authorization_code"
+        }
+
+        response = requests.post(token_url, data=token_data)
+        response.raise_for_status()  # Проверка на ошибки HTTP
+        token_json = response.json()
+
+        # 2. Получение информации о пользователе (опционально)
+        user_info = {}
+        if "access_token" in token_json:
+            user_url = "https://www.googleapis.com/oauth2/v3/userinfo"
+            headers = {"Authorization": f"Bearer {token_json['access_token']}"}
+            user_response = requests.get(user_url, headers=headers)
+            if user_response.status_code == 200:
+                user_info = user_response.json()
+
+        # 3. Подготовка данных для фронтенда
+        frontend_params = {
+            **token_json,
+            **user_info,
+            "state": state  # Передаём обратно state для проверки CSRF
+        }
+
+        # 4. Редирект во Flutter с токенами и данными пользователя
+        return RedirectResponse(f"{FRONTEND_URI}?{urlencode(frontend_params)}")
+
+    except requests.exceptions.RequestException as e:
+        # Обработка ошибок сети/API
+        error_msg = f"OAuth error: {str(e)}"
+        if hasattr(e, 'response') and e.response is not None:
+            error_msg += f" | Response: {e.response.text}"
+        return RedirectResponse(f"{FRONTEND_URI}?error=server_error&message={error_msg}")
+
+    except Exception as e:
+        # Обработка других ошибок
+        return RedirectResponse(f"{FRONTEND_URI}?error=unknown&message={str(e)}")
 
 @app.get("/debug/user")
 async def debug_user(user_id: str = Query(...)):
