@@ -98,8 +98,8 @@ load_dotenv()
 # Конфигурация
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-GOOGLE_REDIRECT_URI = "http://localhost:8000/auth/google/callback"  # https://api.impulsepdr.online/auth/google/callback
-FRONTEND_URI = "http://localhost:64979" # https://impulsepdr.online
+GOOGLE_REDIRECT_URI = "https://api.impulsepdr.online/auth/google/callback"  # https://api.impulsepdr.online/auth/google/callback - http://localhost:8000/auth/google/callback
+FRONTEND_URI = "https://impulsepdr.online" # https://impulsepdr.online - http://localhost:64979
 
 @app.get("/auth/google/callback")
 async def google_callback(request: Request):
