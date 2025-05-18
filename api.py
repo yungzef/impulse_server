@@ -32,7 +32,7 @@ DATA_DIR = "data"
 THEMES_DIR = os.path.join(DATA_DIR, "themes")
 IMAGES_DIR = os.path.join(DATA_DIR, "output_images")
 DB_FILE = os.path.join(DATA_DIR, "impulse_pdr.db")
-VISITS_FILE = Path("visits.json")
+VISITS_FILE = "visit_logs.json"
 
 os.makedirs(THEMES_DIR, exist_ok=True)
 os.makedirs(IMAGES_DIR, exist_ok=True)
@@ -95,10 +95,21 @@ class FavoritePayload(BaseModel):
 
 @app.get("/")
 def read_root():
-    with open(VISITS_FILE, "r") as f:
-        data = json.load(f)
+    if os.path.exists(VISITS_FILE):
+        try:
+            with open(VISITS_FILE, "r", encoding="utf-8") as f:
+                visits = json.load(f)
+        except json.JSONDecodeError:
+            visits = []
+    else:
+        visits = []
 
-    return {"message": "API works", "Visits total": data["count"]}
+    return {
+        "message": "API works",
+        "visits_total": len(visits),
+        "visits": visits
+    }
+
 
 @app.post("/api/visit")
 async def increment_visit(request: Request):
@@ -118,14 +129,19 @@ async def increment_visit(request: Request):
     }
 
     # Append to log or database
-    log_path = "visit_logs.json"
-    if os.path.exists(log_path):
-        visits = json.load(open(log_path))
+    if os.path.exists(VISITS_FILE):
+        try:
+            with open(VISITS_FILE, "r", encoding="utf-8") as f:
+                visits = json.load(f)
+        except json.JSONDecodeError:
+            visits = []
     else:
         visits = []
 
     visits.append(visit_data)
-    json.dump(visits, open(log_path, "w"))
+
+    with open(VISITS_FILE, "w", encoding="utf-8") as f:
+        json.dump(visits, f, ensure_ascii=False, indent=2)
 
     return {"status": "ok", "visit": visit_data}
 
