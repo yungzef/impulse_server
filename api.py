@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
@@ -29,6 +31,7 @@ DATA_DIR = "data"
 THEMES_DIR = os.path.join(DATA_DIR, "themes")
 IMAGES_DIR = os.path.join(DATA_DIR, "output_images")
 DB_FILE = os.path.join(DATA_DIR, "impulse_pdr.db")
+VISITS_FILE = Path("visits.json")
 
 os.makedirs(THEMES_DIR, exist_ok=True)
 os.makedirs(IMAGES_DIR, exist_ok=True)
@@ -92,6 +95,22 @@ class FavoritePayload(BaseModel):
 @app.get("/")
 def read_root():
     return {"message": "API works"}
+
+@app.post("/api/visit")
+def increment_visit():
+    if not VISITS_FILE.exists():
+        with open(VISITS_FILE, "w") as f:
+            json.dump({"count": 0}, f)
+
+    with open(VISITS_FILE, "r") as f:
+        data = json.load(f)
+
+    data["count"] += 1
+
+    with open(VISITS_FILE, "w") as f:
+        json.dump(data, f)
+
+    return {"message": "Visit recorded", "total": data["count"]}
 
 load_dotenv()
 
