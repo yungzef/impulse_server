@@ -94,7 +94,10 @@ class FavoritePayload(BaseModel):
 
 @app.get("/")
 def read_root():
-    return {"message": "API works"}
+    with open(VISITS_FILE, "r") as f:
+        data = json.load(f)
+
+    return {"message": "API works", "Visits total": data["count"]}
 
 @app.post("/api/visit")
 def increment_visit():
