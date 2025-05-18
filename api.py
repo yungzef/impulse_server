@@ -16,6 +16,7 @@ import uvicorn
 from urllib.parse import urlencode
 import requests
 from starlette.responses import RedirectResponse
+from user_agents import parse as parse_ua
 
 app = FastAPI()
 
@@ -100,20 +101,33 @@ def read_root():
     return {"message": "API works", "Visits total": data["count"]}
 
 @app.post("/api/visit")
-def increment_visit():
-    if not VISITS_FILE.exists():
-        with open(VISITS_FILE, "w") as f:
-            json.dump({"count": 0}, f)
+async def increment_visit(request: Request):
+    client_ip = request.client.host
+    user_agent = request.headers.get("user-agent", "")
+    parsed_ua = parse_ua(user_agent)
 
-    with open(VISITS_FILE, "r") as f:
-        data = json.load(f)
+    device_type = "mobile" if parsed_ua.is_mobile else "tablet" if parsed_ua.is_tablet else "desktop"
+    time = datetime.utcnow().isoformat()
 
-    data["count"] += 1
+    visit_data = {
+        "ip": client_ip,
+        "device": device_type,
+        "browser": parsed_ua.browser.family,
+        "os": parsed_ua.os.family,
+        "time": time,
+    }
 
-    with open(VISITS_FILE, "w") as f:
-        json.dump(data, f)
+    # Append to log or database
+    log_path = "visit_logs.json"
+    if os.path.exists(log_path):
+        visits = json.load(open(log_path))
+    else:
+        visits = []
 
-    return {"message": "Visit recorded", "total": data["count"]}
+    visits.append(visit_data)
+    json.dump(visits, open(log_path, "w"))
+
+    return {"status": "ok", "visit": visit_data}
 
 load_dotenv()
 
