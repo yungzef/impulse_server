@@ -1,5 +1,7 @@
 from pathlib import Path
 
+import httpx
+import jwt
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,6 +19,8 @@ from urllib.parse import urlencode
 import requests
 from starlette.responses import RedirectResponse
 from user_agents import parse as parse_ua
+
+from main import router
 
 app = FastAPI()
 
@@ -36,7 +40,6 @@ VISITS_FILE = "visit_logs.json"
 
 os.makedirs(THEMES_DIR, exist_ok=True)
 os.makedirs(IMAGES_DIR, exist_ok=True)
-
 
 def init_db():
     conn = sqlite3.connect(DB_FILE)
@@ -148,6 +151,7 @@ async def increment_visit(request: Request):
 load_dotenv()
 
 # Конфигурация
+GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
 GOOGLE_REDIRECT_URI = "https://api.impulsepdr.online/auth/google/callback"  # https://api.impulsepdr.online/auth/google/callback - http://localhost:8000/auth/google/callback
@@ -212,6 +216,46 @@ async def google_callback(request: Request):
     except Exception as e:
         # Обработка других ошибок
         return RedirectResponse(f"{FRONTEND_URI}?error=unknown&message={str(e)}")
+
+class CodeExchangeRequest(BaseModel):
+    code: str
+
+@router.post("/auth/google/exchange")
+async def exchange_code(request: CodeExchangeRequest):
+    async with httpx.AsyncClient() as client:
+        response = await client.post(
+            GOOGLE_TOKEN_URL,
+            data={
+                "code": request.code,
+                "client_id": GOOGLE_CLIENT_ID,
+                "client_secret": GOOGLE_CLIENT_SECRET,
+                "redirect_uri": GOOGLE_REDIRECT_URI,
+                "grant_type": "authorization_code",
+            },
+            headers={"Content-Type": "application/x-www-form-urlencoded"}
+        )
+
+    if response.status_code != 200:
+        raise HTTPException(status_code=400, detail="Failed to exchange code")
+
+    tokens = response.json()
+    id_token = tokens.get("id_token")
+
+    if not id_token:
+        raise HTTPException(status_code=400, detail="No ID token in response")
+
+    # Decode id_token (JWT) without verifying for simplicity (in production, verify it!)
+    payload = jwt.decode(id_token, options={"verify_signature": False})
+
+    return {
+        "access_token": tokens.get("access_token"),
+        "refresh_token": tokens.get("refresh_token"),
+        "email": payload.get("email"),
+        "name": payload.get("name"),
+        "picture": payload.get("picture"),
+        "sub": payload.get("sub"),
+        "expires_in": tokens.get("expires_in"),
+    }
 
 @app.get("/debug/user")
 async def debug_user(user_id: str = Query(...)):
@@ -384,7 +428,12 @@ async def get_themes(user_id: Optional[str] = None):
 
 
 @app.get("/themes/{theme_id}")
-async def get_theme_by_id(theme_id: int, user_id: str = None):
+async def get_theme_by_id(
+    theme_id: int,
+    user_id: str = None,
+    offset: int = 0,
+    limit: int = 300
+):
     theme_file = os.path.join(THEMES_DIR, f"theme_{theme_id}.json")
     if not os.path.exists(theme_file):
         raise HTTPException(status_code=404, detail="Theme not found")
@@ -392,41 +441,45 @@ async def get_theme_by_id(theme_id: int, user_id: str = None):
     with open(theme_file, "r", encoding="utf-8") as f:
         theme_data = json.load(f)
 
-        questions = []
-        for idx, q in enumerate(theme_data.get("questions", [])):
-            question = q.copy()
-            question_id = f"{theme_id}_{idx}"
-            question["id"] = question_id
+    all_questions = theme_data.get("questions", [])
+    selected_questions = all_questions[offset:offset + limit]
 
-            if user_id:
-                conn = sqlite3.connect(DB_FILE)
-                cursor = conn.cursor()
+    questions = []
+    for idx, q in enumerate(selected_questions):
+        question = q.copy()
+        real_index = offset + idx
+        question_id = f"{theme_id}_{real_index}"
+        question["id"] = question_id
 
-                # Check if question was answered
-                cursor.execute(
-                    "SELECT is_correct FROM answers WHERE user_id = ? AND question_id = ?",
-                    (user_id, question_id)
-                )
-                answer = cursor.fetchone()
-                question["was_answered_correctly"] = bool(answer[0]) if answer else None
+        if user_id:
+            conn = sqlite3.connect(DB_FILE)
+            cursor = conn.cursor()
 
-                # Check if question is favorite
-                cursor.execute(
-                    "SELECT 1 FROM favorites WHERE user_id = ? AND question_id = ?",
-                    (user_id, question_id)
-                )
-                question["is_favorite"] = cursor.fetchone() is not None
+            # Check if question was answered
+            cursor.execute(
+                "SELECT is_correct FROM answers WHERE user_id = ? AND question_id = ?",
+                (user_id, question_id)
+            )
+            answer = cursor.fetchone()
+            question["was_answered_correctly"] = bool(answer[0]) if answer else None
 
-                conn.close()
+            # Check if question is favorite
+            cursor.execute(
+                "SELECT 1 FROM favorites WHERE user_id = ? AND question_id = ?",
+                (user_id, question_id)
+            )
+            question["is_favorite"] = cursor.fetchone() is not None
 
-            questions.append(question)
+            conn.close()
 
-        return {
-            "index": theme_data["index"],
-            "name": theme_data["name"],
-            "question_count": len(questions),
-            "questions": questions
-        }
+        questions.append(question)
+
+    return {
+        "index": theme_data["index"],
+        "name": theme_data["name"],
+        "question_count": len(all_questions),
+        "questions": questions
+    }
 
 
 @app.get("/ticket/random")
