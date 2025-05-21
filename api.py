@@ -220,7 +220,7 @@ async def google_callback(request: Request):
 class CodeExchangeRequest(BaseModel):
     code: str
 
-@router.post("/auth/google/exchange")
+@app.post("/auth/google/exchange")
 async def exchange_code(request: CodeExchangeRequest):
     async with httpx.AsyncClient() as client:
         response = await client.post(
