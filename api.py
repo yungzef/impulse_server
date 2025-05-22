@@ -159,12 +159,9 @@ FRONTEND_URI = "https://impulsepdr.online" # https://impulsepdr.online - http://
 
 @app.get("/auth/google/callback")
 async def google_callback(request: Request):
-    # Получаем параметры из URL
     code = request.query_params.get("code")
     error = request.query_params.get("error")
-    state = request.query_params.get("state")
 
-    # Обработка ошибок
     if error:
         error_description = request.query_params.get("error_description", "")
         return RedirectResponse(f"{FRONTEND_URI}?error={error}&description={error_description}")
@@ -173,7 +170,7 @@ async def google_callback(request: Request):
         return RedirectResponse(f"{FRONTEND_URI}?error=missing_code")
 
     try:
-        # 1. Обмен кода на токены
+        # 1. Exchange code for tokens
         token_url = "https://oauth2.googleapis.com/token"
         token_data = {
             "code": code,
@@ -187,7 +184,7 @@ async def google_callback(request: Request):
         response.raise_for_status()
         token_json = response.json()
 
-        # 2. Получение информации о пользователе
+        # 2. Get user info
         user_info = {}
         if "access_token" in token_json:
             user_url = "https://www.googleapis.com/oauth2/v3/userinfo"
@@ -196,26 +193,24 @@ async def google_callback(request: Request):
             if user_response.status_code == 200:
                 user_info = user_response.json()
 
-        # 3. Сохранение/обновление пользователя в базе данных
-        if user_info.get("sub"):  # sub - это уникальный ID пользователя Google
+        # 3. Save/update user in DB
+        if user_info.get("sub"):
             conn = sqlite3.connect(DB_FILE)
             cursor = conn.cursor()
 
-            # Проверяем, существует ли пользователь
             cursor.execute(
                 "SELECT 1 FROM users WHERE user_id = ?",
-                (user_info["sub"]))
+                (user_info["sub"],))
             user_exists = cursor.fetchone() is not None
 
             if user_exists:
-            # Обновляем данные пользователя
                 cursor.execute('''
-                UPDATE users SET
-                    username = ?,
-                    first_name = ?,
-                    photo_url = ?,
-                    last_login = ?
-                WHERE user_id = ?
+                    UPDATE users SET
+                        username = ?,
+                        first_name = ?,
+                        photo_url = ?,
+                        last_login = ?
+                    WHERE user_id = ?
                 ''', (
                     user_info.get("email"),
                     user_info.get("given_name") or user_info.get("name"),
@@ -224,16 +219,15 @@ async def google_callback(request: Request):
                     user_info["sub"]
                 ))
             else:
-            # Создаем нового пользователя
                 cursor.execute('''
-                INSERT INTO users (
-                    user_id,
-                    username,
-                    first_name,
-                    photo_url,
-                    created_at,
-                    last_login
-                ) VALUES (?, ?, ?, ?, ?, ?)
+                    INSERT INTO users (
+                        user_id,
+                        username,
+                        first_name,
+                        photo_url,
+                        created_at,
+                        last_login
+                    ) VALUES (?, ?, ?, ?, ?, ?)
                 ''', (
                     user_info["sub"],
                     user_info.get("email"),
@@ -246,20 +240,18 @@ async def google_callback(request: Request):
             conn.commit()
             conn.close()
 
-            # 4. Подготовка данных для фронтенда
-            frontend_params = {
-                **token_json,
-                **user_info,
-                "state": state,
-                "user_created": not user_exists if user_info.get("sub") else None
-            }
+        # 4. Prepare response
+        frontend_params = {
+            **token_json,
+            **user_info,
+            "user_created": not user_exists if user_info.get("sub") else None
+        }
 
-            # 5. Редирект во Flutter с токенами и данными пользователя
         return RedirectResponse(f"{FRONTEND_URI}?{urlencode(frontend_params)}")
 
     except requests.exceptions.RequestException as e:
         error_msg = f"OAuth error: {str(e)}"
-        if hasattr(e, 'response') and e.response is not None:
+        if hasattr(e, 'response'):
             error_msg += f" | Response: {e.response.text}"
         return RedirectResponse(f"{FRONTEND_URI}?error=server_error&message={error_msg}")
 
