@@ -184,10 +184,10 @@ async def google_callback(request: Request):
         }
 
         response = requests.post(token_url, data=token_data)
-        response.raise_for_status()  # Проверка на ошибки HTTP
+        response.raise_for_status()
         token_json = response.json()
 
-        # 2. Получение информации о пользователе (опционально)
+        # 2. Получение информации о пользователе
         user_info = {}
         if "access_token" in token_json:
             user_url = "https://www.googleapis.com/oauth2/v3/userinfo"
@@ -196,25 +196,74 @@ async def google_callback(request: Request):
             if user_response.status_code == 200:
                 user_info = user_response.json()
 
-        # 3. Подготовка данных для фронтенда
-        frontend_params = {
-            **token_json,
-            **user_info,
-            "state": state  # Передаём обратно state для проверки CSRF
-        }
+        # 3. Сохранение/обновление пользователя в базе данных
+        if user_info.get("sub"):  # sub - это уникальный ID пользователя Google
+            conn = sqlite3.connect(DB_FILE)
+            cursor = conn.cursor()
 
-        # 4. Редирект во Flutter с токенами и данными пользователя
+            # Проверяем, существует ли пользователь
+            cursor.execute(
+                "SELECT 1 FROM users WHERE user_id = ?",
+                (user_info["sub"]))
+            user_exists = cursor.fetchone() is not None
+
+            if user_exists:
+            # Обновляем данные пользователя
+                cursor.execute('''
+                UPDATE users SET
+                    username = ?,
+                    first_name = ?,
+                    photo_url = ?,
+                    last_login = ?
+                WHERE user_id = ?
+                ''', (
+                    user_info.get("email"),
+                    user_info.get("given_name") or user_info.get("name"),
+                    user_info.get("picture"),
+                    datetime.utcnow().isoformat(),
+                    user_info["sub"]
+                ))
+            else:
+            # Создаем нового пользователя
+                cursor.execute('''
+                INSERT INTO users (
+                    user_id,
+                    username,
+                    first_name,
+                    photo_url,
+                    created_at,
+                    last_login
+                ) VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    user_info["sub"],
+                    user_info.get("email"),
+                    user_info.get("given_name") or user_info.get("name"),
+                    user_info.get("picture"),
+                    datetime.utcnow().isoformat(),
+                    datetime.utcnow().isoformat()
+                ))
+
+            conn.commit()
+            conn.close()
+
+            # 4. Подготовка данных для фронтенда
+            frontend_params = {
+                **token_json,
+                **user_info,
+                "state": state,
+                "user_created": not user_exists if user_info.get("sub") else None
+            }
+
+            # 5. Редирект во Flutter с токенами и данными пользователя
         return RedirectResponse(f"{FRONTEND_URI}?{urlencode(frontend_params)}")
 
     except requests.exceptions.RequestException as e:
-        # Обработка ошибок сети/API
         error_msg = f"OAuth error: {str(e)}"
         if hasattr(e, 'response') and e.response is not None:
             error_msg += f" | Response: {e.response.text}"
         return RedirectResponse(f"{FRONTEND_URI}?error=server_error&message={error_msg}")
 
     except Exception as e:
-        # Обработка других ошибок
         return RedirectResponse(f"{FRONTEND_URI}?error=unknown&message={str(e)}")
 
 class CodeExchangeRequest(BaseModel):
@@ -247,15 +296,15 @@ async def exchange_code(request: CodeExchangeRequest):
     # Decode id_token (JWT) without verifying for simplicity (in production, verify it!)
     payload = jwt.decode(id_token, options={"verify_signature": False})
 
-    return {
-        "access_token": tokens.get("access_token"),
-        "refresh_token": tokens.get("refresh_token"),
-        "email": payload.get("email"),
-        "name": payload.get("name"),
-        "picture": payload.get("picture"),
-        "sub": payload.get("sub"),
-        "expires_in": tokens.get("expires_in"),
-    }
+    return RedirectResponse(
+        url=f"{FRONTEND_URI}/?access_token={tokens.get('access_token')}"
+            f"&refresh_token={tokens.get('refresh_token')}"
+            f"&expires_in={tokens.get('expires_in')}"
+            f"&sub={payload.get('sub')}"
+            f"&name={payload.get('name')}"
+            f"&email={payload.get('email')}"
+            f"&picture={payload.get('picture')}"
+    )
 
 @app.get("/debug/user")
 async def debug_user(user_id: str = Query(...)):
