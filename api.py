@@ -513,6 +513,7 @@ async def get_theme_by_id(
 
             conn.close()
 
+        question.pop("explanation", None)
         questions.append(question)
 
     return {
@@ -521,7 +522,6 @@ async def get_theme_by_id(
         "question_count": len(all_questions),
         "questions": questions
     }
-
 
 @app.get("/ticket/random")
 async def get_random_questions(user_id: Optional[str] = None):
@@ -534,6 +534,7 @@ async def get_random_questions(user_id: Optional[str] = None):
                 question = q.copy()
                 question_id = f"{theme_index}_{idx}"
                 question["id"] = question_id
+                question.pop("explanation", None)
                 all_questions.append(question)
 
     questions = random.sample(all_questions, min(20, len(all_questions)))
@@ -591,6 +592,7 @@ async def get_error_questions(user_id: str = Query(..., min_length=1)):
                 if qid in error_ids:
                     question = q.copy()
                     question["id"] = qid
+                    question.pop("explanation", None)
                     questions.append(question)
 
         return {"questions": questions}  # Гарантированно возвращаем словарь с списком
