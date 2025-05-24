@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 import httpx
 import jwt
@@ -21,6 +22,8 @@ from starlette.responses import JSONResponse
 from user_agents import parse as parse_ua
 import logging
 from contextlib import contextmanager
+
+from main import logger
 
 # Load environment variables
 load_dotenv()
@@ -366,9 +369,11 @@ async def google_callback(request: Request):
 
         # Prepare response
         frontend_params = {
-            **token_json,
-            **user_info,
-            "user_created": not user_exists if user_info.get("sub") else None
+            "access_token": token_json["access_token"],
+            "refresh_token": token_json.get("refresh_token", ""),
+            "sub": user_info.get("sub"),
+            "email": user_info.get("email"),
+            "name": user_info.get("given_name") or user_info.get("name"),
         }
 
         return RedirectResponse(f"{Config.FRONTEND_URI}?{urlencode(frontend_params)}")
@@ -482,48 +487,70 @@ async def ask_pdr_question(
         request: PDRQuestionRequest,
         user_id: str = Query(...)
 ):
-    """Endpoint for asking PDR questions with credit system"""
-    # Initialize credits for user
-    if not init_user_credits(user_id):
-        raise HTTPException(status_code=404, detail="User not found")
-
-    # Check available credits
-    credit_info = get_user_credit_info(user_id)
-    if not credit_info or credit_info['credits_remaining'] <= 0:
-        raise HTTPException(
-            status_code=402,
-            detail=f"No available credits for today. Your daily limit: {credit_info['daily_limit'] if credit_info else 0}"
-        )
-
     try:
-        # Prepare AI request
-        messages = [
-            ChatMessage(**DEFAULT_SYSTEM_PROMPT),
-            ChatMessage(
-                role="user",
-                content=f"контекст вопроса:{request.context}. вопрос пользователя:{request.question}"
-            )
-        ]
+        # Add validation for empty question
+        if not request.question or not request.question.strip():
+            raise HTTPException(status_code=400, detail="Question cannot be empty")
 
-        # Get AI response
-        response = await chat_completion(ChatRequest(messages=messages))
+        # Initialize credits for user with more error handling
+        if not init_user_credits(user_id):
+            raise HTTPException(status_code=404, detail="User not found or could not be initialized")
+
+        # Check available credits with null check
+        credit_info = get_user_credit_info(user_id)
+        if credit_info is None:
+            raise HTTPException(status_code=500, detail="Could not retrieve credit information")
+
+        if credit_info['credits_remaining'] <= 0:
+            raise HTTPException(
+                status_code=402,
+                detail=f"No available credits for today. Your daily limit: {credit_info.get('daily_limit', 0)}"
+            )
+
+        # Prepare AI request with better error handling
+        try:
+            messages = [
+                ChatMessage(**DEFAULT_SYSTEM_PROMPT),
+                ChatMessage(
+                    role="user",
+                    content=f"контекст вопроса:{request.context or 'нет контекста'}. вопрос пользователя:{request.question}"
+                )
+            ]
+
+            # Add timeout for the AI service call
+            response = await asyncio.wait_for(
+                chat_completion(ChatRequest(messages=messages)),
+                timeout=30.0
+            )
+        except asyncio.TimeoutError:
+            raise HTTPException(status_code=504, detail="AI service timeout")
+        except Exception as e:
+            raise HTTPException(status_code=502, detail=f"AI service error: {str(e)}")
+
+        # Validate AI response
         if not response or not isinstance(response, dict) or "response" not in response:
             raise HTTPException(status_code=502, detail="Invalid response from AI service")
 
-        # Use credit after successful response
-        if not use_credit(user_id):
-            raise HTTPException(status_code=500, detail="Failed to update credit count")
+        # Use credit with transaction safety
+        try:
+            if not use_credit(user_id):
+                raise HTTPException(status_code=500, detail="Failed to update credit count")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Credit update failed: {str(e)}")
 
         return {
             "response": response["response"],
-            "credits_remaining": get_user_credit_info(user_id)['credits_remaining']
+            "credits_remaining": get_user_credit_info(user_id).get('credits_remaining', 0)
         }
+
     except HTTPException:
         raise
     except Exception as e:
+        # Log the full error for debugging
+        logger.error(f"Unexpected error processing question: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=500,
-            detail=f"Failed to process your question: {str(e)}"
+            detail="An unexpected error occurred while processing your question"
         )
 
 
