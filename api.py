@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Query, Request, Body, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
+from httpx import AsyncClient
 from openai import OpenAI, AsyncOpenAI
 from pydantic import BaseModel
 from typing import List, Dict, Optional
@@ -24,6 +25,7 @@ import logging
 from contextlib import contextmanager
 
 from main import logger
+from openrouter_key_manager import OpenRouterAPIClient
 
 # Load environment variables
 load_dotenv()
@@ -51,6 +53,7 @@ os.makedirs(Config.IMAGES_DIR, exist_ok=True)
 
 # Initialize FastAPI app
 app = FastAPI(title="Impulse PDR API", version="1.0.0")
+api_client = OpenRouterAPIClient()
 
 # CORS Middleware
 app.add_middleware(
@@ -157,7 +160,7 @@ class ChatRequest(BaseModel):
 
 class PDRQuestionRequest(BaseModel):
     question: str
-    context: str
+    context: str = ""
 
 
 class CodeExchangeRequest(BaseModel):
@@ -174,19 +177,21 @@ class CreditInfoResponse(BaseModel):
 
 MUTED_KEYS: Dict[str, datetime] = {}
 KEY_ROTATION_FILE = "keys.json"
-KEY_MUTE_DURATION = timedelta(hours=1)  # Mute keys for 1 hour when rate limited
+KEY_FILE = Path(os.getenv("KEY_FILE", "keys.json"))
+# Update these constants at the top of your file
+KEY_MUTE_DURATION = timedelta(minutes=15)  # Reduced from 1 hour to 15 minutes
+MAX_RETRIES = 3  # Maximum retries with different keys
 
 def load_keys() -> List[str]:
-    """Load and validate API keys"""
     try:
-        with open(KEY_ROTATION_FILE) as f:
+        with open("keys.json") as f:
             data = json.load(f)
-            if not isinstance(data.get("api_keys"), list):
-                raise ValueError("Invalid keys format")
-            return data["api_keys"]
+        keys = data.get("api_keys", [])
+        valid_keys = [k for k in keys if k.startswith("sk-or-v1-")]
+        return valid_keys
     except Exception as e:
-        logger.error(f"Key loading failed: {e}")
-        raise HTTPException(500, "API key configuration error")
+        logger.error(f"Failed to load keys: {e}")
+        return []
 
 def is_muted(key: str) -> bool:
     """Check if key is temporarily muted"""
@@ -198,12 +203,23 @@ def mute_key(key: str):
     MUTED_KEYS[key] = datetime.now() + KEY_MUTE_DURATION
     logger.warning(f"Muted key {key[-4:]}... for {KEY_MUTE_DURATION}")
 
-def get_active_key() -> str:
-    """Get first available non-muted key"""
+
+def get_active_key(retry_count: int = 0) -> str:
+    """Get first available non-muted key with retry limit"""
+    if retry_count >= MAX_RETRIES:
+        raise HTTPException(429, "Maximum retries exceeded")
+
     keys = load_keys()
     for key in keys:
         if not is_muted(key):
             return key
+
+    # If all keys are muted, try the least recently muted one
+    if MUTED_KEYS:
+        oldest_muted = min(MUTED_KEYS.items(), key=lambda x: x[1])
+        if datetime.now() > oldest_muted[1] + timedelta(minutes=5):  # Small buffer
+            return oldest_muted[0]
+
     raise HTTPException(429, "All keys temporarily exhausted")
 
 
@@ -215,6 +231,71 @@ def get_openai_client(api_key: str) -> OpenAI:
         api_key=api_key,
     )
 
+async def verify_openrouter_key(key: str) -> bool:
+    """Verify if an OpenRouter key is valid"""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                "https://openrouter.ai/api/v1/auth/key",
+                headers={"Authorization": f"Bearer {key}"}
+            )
+            return response.status_code == 200
+    except Exception:
+        return False
+
+def get_openrouter_headers(key: str) -> dict:
+    """Return complete headers required by OpenRouter"""
+    return {
+        "Authorization": f"Bearer {key}",
+        "HTTP-Referer": "https://impulsepdr.online",  # Your actual domain
+        "X-Title": "Impulse PDR",  # Your application name
+        "Content-Type": "application/json",
+        # OpenRouter now requires additional headers:
+        "X-API-Version": "1.0",  # Added requirement
+        "Accept": "application/json"  # Explicit accept header
+    }
+
+async def call_openrouter(messages: list, model: str = "google/gemma-3-27b-it:free") -> dict:
+    """Robust OpenRouter API call implementation"""
+    key = get_active_key()
+    if not key:
+        raise HTTPException(status_code=503, detail="No active API keys available")
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers=get_openrouter_headers(key),
+                json={
+                    "model": model,
+                    "messages": messages,
+                    "temperature": 0.7,  # Recommended default
+                    "max_tokens": 1000   # Prevent excessive responses
+                }
+            )
+
+            # Handle specific error cases
+            if response.status_code == 401:
+                error_data = response.json()
+                logger.error(f"Auth failed for key {key[-8:]}: {error_data}")
+                mute_key(key)
+                raise HTTPException(
+                    status_code=401,
+                    detail="Invalid API credentials - key has been temporarily disabled"
+                )
+
+            response.raise_for_status()
+            return response.json()
+
+    except httpx.ReadTimeout:
+        logger.error("OpenRouter API timeout")
+        raise HTTPException(status_code=504, detail="API request timeout")
+    except httpx.HTTPStatusError as e:
+        logger.error(f"OpenRouter API error: {e.response.text}")
+        raise HTTPException(status_code=502, detail="AI service unavailable")
+    except Exception as e:
+        logger.error(f"Unexpected error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 def load_all_themes() -> List[Dict]:
     """Load all theme files from the themes directory"""
@@ -440,66 +521,110 @@ async def exchange_code(request: CodeExchangeRequest):
             f"&picture={payload.get('picture')}"
     )
 
-
-async def chat_completion(chat_request: ChatRequest) -> dict:
-    """
-    Enhanced chat completion with:
-    - Key rotation
-    - Rate limit handling
-    - Better error reporting
-    """
+async def chat_completion(messages: list, model: str = "google/gemma-3-27b-it:free") -> dict:
+    """Robust OpenRouter API call with proper error handling"""
     key = get_active_key()
-    client = AsyncOpenAI(
-        api_key=key,
-        base_url="https://openrouter.ai/api/v1",
-        timeout=30.0
-    )
+    if not key:
+        raise HTTPException(status_code=503, detail="No available API keys")
 
     try:
-        response = await client.chat.completions.create(
-            model="google/gemma-3-27b-it:free",
-            messages=[msg.dict() for msg in chat_request.messages],
-            extra_headers={
-                "HTTP-Referer": "https://yourdomain.com",
-                "X-Title": "Your App Name",
-            }
-        )
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers=get_openrouter_headers(key),
+                json={
+                    "model": model,
+                    "messages": messages
+                }
+            )
 
-        return {
-            "response": response.choices[0].message.content,
-            "usage": {
-                "prompt_tokens": response.usage.prompt_tokens,
-                "completion_tokens": response.usage.completion_tokens,
-                "total_tokens": response.usage.total_tokens
-            }
-        }
+            # Handle specific OpenRouter errors
+            if response.status_code == 401:
+                error_data = response.json()
+                logger.error(f"OpenRouter auth failed: {error_data}")
+                mute_key(key)
+                raise HTTPException(
+                    status_code=401,
+                    detail=f"API authentication failed: {error_data.get('error', {}).get('message')}"
+                )
 
+            response.raise_for_status()
+            return response.json()
+
+    except httpx.ReadTimeout:
+        logger.error("OpenRouter API timeout")
+        raise HTTPException(status_code=504, detail="API request timeout")
     except Exception as e:
-        error_msg = str(e).lower()
-
-        # Handle rate limits
-        if "quota" in error_msg or "limit" in error_msg:
-            mute_key(key)
-            logger.warning(f"Rate limited key {key[-4:]}...")
-            return await chat_completion(chat_request)  # Retry with next key
-
-        # Handle other API errors
-        logger.error(f"OpenRouter API error: {e}")
-        raise HTTPException(502, f"AI service error: {e}")
-
+        logger.error(f"OpenRouter API error: {str(e)}")
+        raise HTTPException(status_code=502, detail="AI service unavailable")
 
 # Default system prompt for PDR questions
 DEFAULT_SYSTEM_PROMPT = {
     "role": "system",
     "content": (
-        "Ти — помічник з правил дорожнього руху України. "
-        "Твоя мета — відповідати просто, грамотно та зрозумілою українською мовою. "
-        "Пояснюй ПДР як для людини, яка готується до іспиту. "
-        "Не використовуй складну лексику, відповідай коротко та чітко. "
+        "Ти — помічник з правил дорожнього руху України."
+        "Твоя мета — відповідати просто, грамотно та зрозумілою українською мовою."
+        "Пояснюй ПДР як для людини, яка готується до іспиту."
+        "Не використовуй складну лексику, відповідай коротко та чітко."
         "Якщо щось неясно — став уточнюючі запитання."
     )
 }
 
+
+@app.get("/admin/verify-keys", tags=["admin"])
+async def verify_keys(admin_token: str = Query(...)):
+    """Test all API keys (admin only)"""
+    if admin_token != Config.ADMIN_TOKEN:
+        raise HTTPException(403, "Forbidden")
+
+    results = []
+    for key in load_keys():
+        async with AsyncClient(timeout=10.0) as client:
+            try:
+                # Test with a simple request
+                test_response = await client.post(
+                    "https://openrouter.ai/api/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {key}",
+                        "HTTP-Referer": "https://impulsepdr.online",
+                        "X-Title": "Key Tester"
+                    },
+                    json={
+                        "model": "google/gemma-3-27b-it:free",
+                        "messages": [{"role": "user", "content": "Test"}]
+                    }
+                )
+                valid = test_response.status_code == 200
+                if valid:
+                    try:
+                        data = test_response.json()
+                        valid = bool(data.get("choices"))
+                    except:
+                        valid = False
+            except Exception as e:
+                valid = False
+
+        results.append({
+            "key": f"{key[:4]}...{key[-4:]}",
+            "valid": valid,
+            "muted": is_muted(key),
+            "muted_until": MUTED_KEYS.get(key, {}).isoformat() if is_muted(key) else None
+        })
+
+    return {"results": results}
+
+def validate_key_format(key: str) -> bool:
+    """Validate OpenRouter key format"""
+    return key.startswith("sk-or-v1-") and len(key) > 30
+
+def get_openrouter_headers(key: str) -> dict:
+    """Proper OpenRouter headers with required fields"""
+    return {
+        "Authorization": f"Bearer {key}",
+        "HTTP-Referer": "https://impulsepdr.online",  # Required by OpenRouter
+        "X-Title": "Impulse PDR",  # Required by OpenRouter
+        "Content-Type": "application/json"
+    }
 
 @app.get("/pdr/ai-health", tags=["ai"])
 async def check_ai_health():
@@ -525,85 +650,51 @@ async def check_ai_health():
         )
 
 
-@app.post("/pdr/question", tags=["ai"])
+@app.post("/pdr/question")
 async def ask_pdr_question(
-        request: PDRQuestionRequest,
-        user_id: str = Query(...)
+    request: PDRQuestionRequest,
+    user_id: str = Query(...)
 ):
-    """Enhanced endpoint with:
-    - Credit checks
-    - Key rotation
-    - Detailed error handling
-    """
-    # Validate input
-    if not request.question.strip():
-        raise HTTPException(400, "Question cannot be empty")
-
-    # Check credits
-    try:
-        if not init_user_credits(user_id):
-            raise HTTPException(404, "User not found")
-
-        credit_info = get_user_credit_info(user_id)
-        if not credit_info:
-            raise HTTPException(500, "Credit system error")
-
-        if credit_info['credits_remaining'] <= 0:
-            raise HTTPException(402,
-                                f"No credits left (Daily limit: {credit_info.get('daily_limit', 0)})")
-    except Exception as e:
-        logger.error(f"Credit check failed: {e}")
-        raise HTTPException(500, "System error")
-
-    # Process AI request
     try:
         messages = [
-            ChatMessage(**DEFAULT_SYSTEM_PROMPT),
-            ChatMessage(
-                role="user",
-                content=f"Context: {request.context or 'none'}. Question: {request.question}"
-            )
+            {"role": "user", "content": f"prompt: {DEFAULT_SYSTEM_PROMPT}, content:{request.context}\n\n{request.question}"}
         ]
 
-        # Get AI response
-        start_time = datetime.now()
-        response = await chat_completion(ChatRequest(messages=messages))
-        processing_time = (datetime.now() - start_time).total_seconds()
+        response = await api_client.call_api(messages)
 
-        logger.info(f"AI request processed in {processing_time:.2f}s")
-
-        # Deduct credit
-        if not use_credit(user_id):
-            logger.error(f"Credit deduction failed for user {user_id}")
-            raise HTTPException(500, "Credit system error")
+        if "choices" not in response or not response["choices"]:
+            logger.error(f"Invalid OpenRouter response: {response}")
+            raise HTTPException(status_code=502, detail="Invalid response from language model")
 
         return {
-            "response": response["response"],
-            "credits_remaining": get_user_credit_info(user_id)["credits_remaining"],
-            "api_usage": response.get("usage")
+            "answer": response["choices"][0]["message"]["content"],
+            "usage": response.get("usage", {})
         }
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Unexpected error: {e}", exc_info=True)
-        raise HTTPException(500, "Processing error")
+        logger.error(f"Endpoint error: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Processing error")
 
-@app.get("/system/keys/status", tags=["admin"])
-async def get_key_status():
-    """Check status of all API keys"""
-    keys = load_keys()
-    return {
-        "total_keys": len(keys),
-        "active_keys": sum(1 for k in keys if not is_muted(k)),
-        "muted_keys": [
-            {
-                "key": f"{k[:4]}...{k[-4:]}",
-                "muted_until": MUTED_KEYS[k].isoformat()
-            }
-            for k in MUTED_KEYS if MUTED_KEYS[k] > datetime.now()
-        ]
-    }
+
+@app.get("/admin/keys/status")
+async def get_key_status(admin_token: str = Query(...)):
+    """Check status of all API keys (admin only)"""
+    if admin_token != os.getenv("ADMIN_TOKEN") or "filatova":
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    keys_status = []
+    for key in api_client.key_manager.load_keys():
+        is_valid = await api_client.key_manager.verify_key(key)
+        keys_status.append({
+            "key": f"{key[:4]}...{key[-4:]}",
+            "valid": is_valid,
+            "muted": api_client.key_manager.is_key_muted(key),
+            "muted_until": api_client.key_manager.muted_keys.get(key)
+        })
+
+    return {"keys": keys_status}
 
 # User endpoints
 @app.get("/users", tags=["users"])
