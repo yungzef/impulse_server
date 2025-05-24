@@ -172,28 +172,39 @@ class CreditInfoResponse(BaseModel):
     last_reset_date: str
 
 
-# Rate limiting
 MUTED_KEYS: Dict[str, datetime] = {}
+KEY_ROTATION_FILE = "keys.json"
+KEY_MUTE_DURATION = timedelta(hours=1)  # Mute keys for 1 hour when rate limited
 
-
-def load_keys(filename: str = "keys.json") -> List[str]:
-    """Load API keys from file"""
+def load_keys() -> List[str]:
+    """Load and validate API keys"""
     try:
-        with open(filename, "r") as f:
-            return json.load(f)["api_keys"]
+        with open(KEY_ROTATION_FILE) as f:
+            data = json.load(f)
+            if not isinstance(data.get("api_keys"), list):
+                raise ValueError("Invalid keys format")
+            return data["api_keys"]
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to load API keys: {str(e)}")
-
+        logger.error(f"Key loading failed: {e}")
+        raise HTTPException(500, "API key configuration error")
 
 def is_muted(key: str) -> bool:
-    """Check if API key is muted"""
-    mute_time = MUTED_KEYS.get(key)
-    return mute_time and datetime.utcnow() < mute_time
-
+    """Check if key is temporarily muted"""
+    muted_until = MUTED_KEYS.get(key)
+    return muted_until and muted_until > datetime.now()
 
 def mute_key(key: str):
-    """Mute an API key"""
-    MUTED_KEYS[key] = datetime.utcnow() + Config.MUTE_DURATION
+    """Temporarily mute a rate-limited key"""
+    MUTED_KEYS[key] = datetime.now() + KEY_MUTE_DURATION
+    logger.warning(f"Muted key {key[-4:]}... for {KEY_MUTE_DURATION}")
+
+def get_active_key() -> str:
+    """Get first available non-muted key"""
+    keys = load_keys()
+    for key in keys:
+        if not is_muted(key):
+            return key
+    raise HTTPException(429, "All keys temporarily exhausted")
 
 
 # Helper functions
@@ -430,43 +441,51 @@ async def exchange_code(request: CodeExchangeRequest):
     )
 
 
-# AI endpoints
-@app.post("/chat/completions", tags=["ai"])
-async def chat_completion(request: ChatRequest):
+async def chat_completion(chat_request: ChatRequest) -> dict:
     """
-    Endpoint for handling chat completions using OpenRouter API.
-    Requires messages in the format:
-    [
-        {"role": "system", "content": "..."},
-        {"role": "user", "content": "..."}
-    ]
+    Enhanced chat completion with:
+    - Key rotation
+    - Rate limit handling
+    - Better error reporting
     """
-    keys = load_keys()
-    for key in keys:
-        if is_muted(key):
-            continue
-
-        client = get_openai_client(key)
-        try:
-            completion = client.chat.completions.create(
-                model="google/gemma-3-27b-it:free",
-                extra_headers={
-                    "HTTP-Referer": Config.FRONTEND_URI,
-                    "X-Title": "Impulse PDR",
-                },
-                messages=[msg.dict() for msg in request.messages]
-            )
-            return {"response": completion.choices[0].message.content}
-        except Exception as e:
-            if "quota" in str(e).lower() or "limit" in str(e).lower():
-                mute_key(key)
-                continue
-            raise HTTPException(status_code=500, detail=f"OpenRouter API error: {str(e)}")
-
-    raise HTTPException(
-        status_code=429,
-        detail="All API keys are exhausted or rate limited. Please try again later."
+    key = get_active_key()
+    client = AsyncOpenAI(
+        api_key=key,
+        base_url="https://openrouter.ai/api/v1",
+        timeout=30.0
     )
+
+    try:
+        response = await client.chat.completions.create(
+            model="google/gemma-3-27b-it:free",
+            messages=[msg.dict() for msg in chat_request.messages],
+            extra_headers={
+                "HTTP-Referer": "https://yourdomain.com",
+                "X-Title": "Your App Name",
+            }
+        )
+
+        return {
+            "response": response.choices[0].message.content,
+            "usage": {
+                "prompt_tokens": response.usage.prompt_tokens,
+                "completion_tokens": response.usage.completion_tokens,
+                "total_tokens": response.usage.total_tokens
+            }
+        }
+
+    except Exception as e:
+        error_msg = str(e).lower()
+
+        # Handle rate limits
+        if "quota" in error_msg or "limit" in error_msg:
+            mute_key(key)
+            logger.warning(f"Rate limited key {key[-4:]}...")
+            return await chat_completion(chat_request)  # Retry with next key
+
+        # Handle other API errors
+        logger.error(f"OpenRouter API error: {e}")
+        raise HTTPException(502, f"AI service error: {e}")
 
 
 # Default system prompt for PDR questions
@@ -504,77 +523,87 @@ async def check_ai_health():
             status_code=503,
             detail=f"AI service unavailable: {str(e)}"
         )
+
+
 @app.post("/pdr/question", tags=["ai"])
 async def ask_pdr_question(
         request: PDRQuestionRequest,
         user_id: str = Query(...)
 ):
+    """Enhanced endpoint with:
+    - Credit checks
+    - Key rotation
+    - Detailed error handling
+    """
+    # Validate input
+    if not request.question.strip():
+        raise HTTPException(400, "Question cannot be empty")
+
+    # Check credits
     try:
-        # Add validation for empty question
-        if not request.question or not request.question.strip():
-            raise HTTPException(status_code=400, detail="Question cannot be empty")
-
-        # Initialize credits for user with more error handling
         if not init_user_credits(user_id):
-            raise HTTPException(status_code=404, detail="User not found or could not be initialized")
+            raise HTTPException(404, "User not found")
 
-        # Check available credits with null check
         credit_info = get_user_credit_info(user_id)
-        if credit_info is None:
-            raise HTTPException(status_code=500, detail="Could not retrieve credit information")
+        if not credit_info:
+            raise HTTPException(500, "Credit system error")
 
         if credit_info['credits_remaining'] <= 0:
-            raise HTTPException(
-                status_code=402,
-                detail=f"No available credits for today. Your daily limit: {credit_info.get('daily_limit', 0)}"
+            raise HTTPException(402,
+                                f"No credits left (Daily limit: {credit_info.get('daily_limit', 0)})")
+    except Exception as e:
+        logger.error(f"Credit check failed: {e}")
+        raise HTTPException(500, "System error")
+
+    # Process AI request
+    try:
+        messages = [
+            ChatMessage(**DEFAULT_SYSTEM_PROMPT),
+            ChatMessage(
+                role="user",
+                content=f"Context: {request.context or 'none'}. Question: {request.question}"
             )
+        ]
 
-        # Prepare AI request with better error handling
-        try:
-            messages = [
-                ChatMessage(**DEFAULT_SYSTEM_PROMPT),
-                ChatMessage(
-                    role="user",
-                    content=f"контекст вопроса:{request.context or 'нет контекста'}. вопрос пользователя:{request.question}"
-                )
-            ]
+        # Get AI response
+        start_time = datetime.now()
+        response = await chat_completion(ChatRequest(messages=messages))
+        processing_time = (datetime.now() - start_time).total_seconds()
 
-            # Add timeout for the AI service call
-            response = await asyncio.wait_for(
-                chat_completion(ChatRequest(messages=messages)),
-                timeout=30.0
-            )
-        except asyncio.TimeoutError:
-            raise HTTPException(status_code=504, detail="AI service timeout")
-        except Exception as e:
-            raise HTTPException(status_code=502, detail=f"AI service error: {str(e)}")
+        logger.info(f"AI request processed in {processing_time:.2f}s")
 
-        # Validate AI response
-        if not response or not isinstance(response, dict) or "response" not in response:
-            raise HTTPException(status_code=502, detail="Invalid response from AI service")
-
-        # Use credit with transaction safety
-        try:
-            if not use_credit(user_id):
-                raise HTTPException(status_code=500, detail="Failed to update credit count")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Credit update failed: {str(e)}")
+        # Deduct credit
+        if not use_credit(user_id):
+            logger.error(f"Credit deduction failed for user {user_id}")
+            raise HTTPException(500, "Credit system error")
 
         return {
             "response": response["response"],
-            "credits_remaining": get_user_credit_info(user_id).get('credits_remaining', 0)
+            "credits_remaining": get_user_credit_info(user_id)["credits_remaining"],
+            "api_usage": response.get("usage")
         }
 
     except HTTPException:
         raise
     except Exception as e:
-        # Log the full error for debugging
-        logger.error(f"Unexpected error processing question: {str(e)}", exc_info=True)
-        raise HTTPException(
-            status_code=500,
-            detail="An unexpected error occurred while processing your question"
-        )
+        logger.error(f"Unexpected error: {e}", exc_info=True)
+        raise HTTPException(500, "Processing error")
 
+@app.get("/system/keys/status", tags=["admin"])
+async def get_key_status():
+    """Check status of all API keys"""
+    keys = load_keys()
+    return {
+        "total_keys": len(keys),
+        "active_keys": sum(1 for k in keys if not is_muted(k)),
+        "muted_keys": [
+            {
+                "key": f"{k[:4]}...{k[-4:]}",
+                "muted_until": MUTED_KEYS[k].isoformat()
+            }
+            for k in MUTED_KEYS if MUTED_KEYS[k] > datetime.now()
+        ]
+    }
 
 # User endpoints
 @app.get("/users", tags=["users"])
