@@ -482,6 +482,28 @@ DEFAULT_SYSTEM_PROMPT = {
 }
 
 
+@app.get("/pdr/ai-health", tags=["ai"])
+async def check_ai_health():
+    try:
+        # Create properly formatted test message
+        test_messages = [
+            ChatMessage(
+                role="system",
+                content="You are a helpful assistant. Respond with 'OK' if operational."
+            ),
+            ChatMessage(
+                role="user",
+                content="Test connection"
+            )
+        ]
+
+        test_response = await chat_completion(ChatRequest(messages=test_messages))
+        return {"status": "healthy", "response": test_response}
+    except Exception as e:
+        raise HTTPException(
+            status_code=503,
+            detail=f"AI service unavailable: {str(e)}"
+        )
 @app.post("/pdr/question", tags=["ai"])
 async def ask_pdr_question(
         request: PDRQuestionRequest,
