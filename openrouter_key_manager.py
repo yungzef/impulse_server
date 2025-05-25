@@ -67,6 +67,8 @@ class OpenRouterAPIClient:
 
         headers = {
             "Authorization": f"Bearer {key}",
+            "Content-Type": "application/json",
+            "Accept": "application/json",
         }
 
         payload = {
