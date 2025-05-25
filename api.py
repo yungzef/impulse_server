@@ -71,7 +71,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 # Database setup
 def init_db():
     """Initialize database with required tables"""
