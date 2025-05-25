@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 from httpx import AsyncClient
 from openai import OpenAI, AsyncOpenAI
 from pydantic import BaseModel
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 import json
 import os
 import glob
@@ -44,8 +44,15 @@ class Config:
     DB_FILE = os.path.join(DATA_DIR, "impulse_pdr.db")
     VISITS_FILE = "visit_logs.json"
     ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "filatova")
+    MONOBANK_TOKEN = os.getenv("MONOBANK_TOKEN", "ud2yUaJH_kx4QbbuAmZObvlesfGTTwp1D_PW9lrjuqtg")
     MUTE_DURATION = timedelta(hours=1)
 
+
+AMOUNT_TO_DAYS = {
+    100: 7,  # 99 грн
+    199_00: 30,  # 199 грн
+    399_00: 90  # 399 грн
+}
 
 # Create directories if they don't exist
 os.makedirs(Config.THEMES_DIR, exist_ok=True)
@@ -118,6 +125,25 @@ def init_db():
         )
         ''')
 
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS premium_subscriptions (
+            user_id TEXT PRIMARY KEY,
+            is_active BOOLEAN DEFAULT FALSE,
+            start_date TEXT,
+            end_date TEXT,
+            FOREIGN KEY(user_id) REFERENCES users(user_id)
+        )
+        ''')
+
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_time_limits (
+            user_id TEXT PRIMARY KEY,
+            remaining_time INTEGER DEFAULT 1800,
+            last_update TEXT,
+            FOREIGN KEY(user_id) REFERENCES users(user_id)
+        )
+        ''')
+
         conn.commit()
 
 
@@ -137,7 +163,15 @@ def db_connection():
 init_db()
 
 
+class UsageUpdate(BaseModel):
+    user_id: str
+    remaining_time: int
+    is_premium: bool
+
 # Models
+class UserRequest(BaseModel):
+    user_id: str
+
 class UserAnswerPayload(BaseModel):
     question_id: str
     is_correct: bool
@@ -175,12 +209,29 @@ class CreditInfoResponse(BaseModel):
     last_reset_date: str
 
 
+# Модель для запроса премиум-доступа
+class PremiumActivationRequest(BaseModel):
+    user_id: str
+    duration_days: int = 30  # По умолчанию 30 дней премиума
+
+
+# Модель для ответа о статусе премиума
+class PremiumStatusResponse(BaseModel):
+    user_id: str
+    is_active: bool
+    start_date: Optional[str]
+    end_date: Optional[str]
+    days_remaining: Optional[int]
+    benefits: Dict[str, Any]
+
+
 MUTED_KEYS: Dict[str, datetime] = {}
 KEY_ROTATION_FILE = "keys.json"
 KEY_FILE = Path(os.getenv("KEY_FILE", "keys.json"))
 # Update these constants at the top of your file
 KEY_MUTE_DURATION = timedelta(minutes=15)  # Reduced from 1 hour to 15 minutes
 MAX_RETRIES = 3  # Maximum retries with different keys
+
 
 def load_keys() -> List[str]:
     try:
@@ -193,10 +244,12 @@ def load_keys() -> List[str]:
         logger.error(f"Failed to load keys: {e}")
         return []
 
+
 def is_muted(key: str) -> bool:
     """Check if key is temporarily muted"""
     muted_until = MUTED_KEYS.get(key)
     return muted_until and muted_until > datetime.now()
+
 
 def mute_key(key: str):
     """Temporarily mute a rate-limited key"""
@@ -231,6 +284,7 @@ def get_openai_client(api_key: str) -> OpenAI:
         api_key=api_key,
     )
 
+
 async def verify_openrouter_key(key: str) -> bool:
     """Verify if an OpenRouter key is valid"""
     try:
@@ -243,6 +297,7 @@ async def verify_openrouter_key(key: str) -> bool:
     except Exception:
         return False
 
+
 def get_openrouter_headers(key: str) -> dict:
     """Return complete headers required by OpenRouter"""
     return {
@@ -254,6 +309,7 @@ def get_openrouter_headers(key: str) -> dict:
         "X-API-Version": "1.0",  # Added requirement
         "Accept": "application/json"  # Explicit accept header
     }
+
 
 async def call_openrouter(messages: list, model: str = "google/gemma-3-27b-it:free") -> dict:
     """Robust OpenRouter API call implementation"""
@@ -270,7 +326,7 @@ async def call_openrouter(messages: list, model: str = "google/gemma-3-27b-it:fr
                     "model": model,
                     "messages": messages,
                     "temperature": 0.7,  # Recommended default
-                    "max_tokens": 1000   # Prevent excessive responses
+                    "max_tokens": 1000  # Prevent excessive responses
                 }
             )
 
@@ -297,6 +353,7 @@ async def call_openrouter(messages: list, model: str = "google/gemma-3-27b-it:fr
         logger.error(f"Unexpected error: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
+
 def load_all_themes() -> List[Dict]:
     """Load all theme files from the themes directory"""
     themes = []
@@ -320,6 +377,251 @@ def get_question_by_id(question_id: str) -> Optional[Dict]:
             return theme.get("questions", [])[q_idx]
     except (ValueError, IndexError, FileNotFoundError):
         return None
+
+
+# Эндпоинты для работы с премиум-доступом
+@app.post("/premium/activate", tags=["premium"])
+async def activate_premium(
+    request: PremiumActivationRequest,
+    admin_token: str = Query(None, description="Токен администратора для выдачи премиума")
+):
+    if admin_token and admin_token != Config.ADMIN_TOKEN:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    mono_token = Config.MONOBANK_TOKEN
+    if not mono_token:
+        raise HTTPException(status_code=500, detail="Missing Monobank API token")
+
+    headers = {"X-Token": mono_token}
+    from_time = int((datetime.utcnow() - timedelta(minutes=5)).timestamp())
+    time_threshold = datetime.utcnow() - timedelta(minutes=5)
+
+    seen_transaction_ids = set()
+
+    for _ in range(10):
+        async with httpx.AsyncClient() as client:
+            try:
+                resp = await client.get(
+                    f"https://api.monobank.ua/personal/statement/HDQfo6IhRAydq1npwDgvAw/{from_time}",
+                    headers=headers
+                )
+                await resp.aread()
+                data = resp.json()
+
+                print(resp.status_code, resp.text)
+
+                if not isinstance(data, list):
+                    raise HTTPException(status_code=400, detail=f"Invalid response from Monobank: {data}")
+
+                for txn in data:
+                    txn_id = txn.get("id")
+                    if txn_id in seen_transaction_ids:
+                        continue
+                    seen_transaction_ids.add(txn_id)
+
+                    txn_time_unix = txn.get("time")
+                    if not txn_time_unix:
+                        continue
+
+                    txn_time = datetime.utcfromtimestamp(txn_time_unix)
+                    if txn_time < time_threshold:
+                        continue  # игнорируем старые транзакции
+
+                    if txn.get("operationAmount") < 0:
+                        continue
+
+                    amount = abs(txn.get("amount", 0))
+                    duration_days = AMOUNT_TO_DAYS.get(amount)
+                    if duration_days:
+                        return await _grant_premium(request.user_id, duration_days)
+
+                from_time = int(datetime.utcnow().timestamp())
+
+            except Exception as e:
+                raise HTTPException(status_code=400, detail=f"Monobank API error: {str(e)}")
+
+        await asyncio.sleep(30)
+
+    raise HTTPException(status_code=408, detail="Поповнення не виявлено")
+
+
+async def _grant_premium(user_id: str, duration_days: int):
+    today = datetime.utcnow()
+    end_date = today + timedelta(days=duration_days)
+
+    with db_connection() as conn:
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT 1 FROM premium_subscriptions WHERE user_id = ?", (user_id,))
+        has_premium = cursor.fetchone() is not None
+
+        if has_premium:
+            cursor.execute('''
+                UPDATE premium_subscriptions 
+                SET end_date = ?, is_active = TRUE
+                WHERE user_id = ?
+            ''', (end_date.isoformat(), user_id))
+        else:
+            cursor.execute('''
+                INSERT INTO premium_subscriptions 
+                (user_id, is_active, start_date, end_date)
+                VALUES (?, ?, ?, ?)
+            ''', (user_id, True, today.isoformat(), end_date.isoformat()))
+
+        cursor.execute('''
+            INSERT OR REPLACE INTO user_credits 
+            (user_id, daily_limit, credits_used, last_reset_date)
+            VALUES (?, 10, 0, ?)
+        ''', (user_id, today.date().isoformat()))
+
+        conn.commit()
+
+    return {
+        "status": "success",
+        "message": "Premium activated by payment",
+        "end_date": end_date.isoformat(),
+        "duration_days": duration_days
+    }
+
+
+@app.get("/premium/status", tags=["premium"])
+async def get_premium_status(
+        user_id: str = Query(..., description="ID пользователя для проверки статуса")
+):
+    print("id:" + str(user_id))
+    """Получить текущий статус премиум-подписки пользователя"""
+    try:
+        today = datetime.utcnow()
+
+        with db_connection() as conn:
+            cursor = conn.cursor()
+
+            # Получаем информацию о подписке
+            cursor.execute(
+                "SELECT is_active, start_date, end_date FROM premium_subscriptions WHERE user_id = ?",
+                (user_id,)
+            )
+            subscription = cursor.fetchone()
+
+            if not subscription:
+                return PremiumStatusResponse(
+                    user_id=user_id,
+                    is_active=False,
+                    benefits={
+                        "ai_credits_per_day": 3,
+                        "max_tests_per_day": 50,
+                        "description": "Базовый доступ (3 кредита ИИ в день, максимум 50 тестов)"
+                    }
+                )
+
+            is_active = bool(subscription["is_active"])
+            start_date = subscription["start_date"]
+            end_date = subscription["end_date"]
+
+            # Проверяем, не истекла ли подписка
+            if is_active and end_date:
+                end_datetime = datetime.fromisoformat(end_date)
+                if today > end_datetime:
+                    is_active = False
+                    # Обновляем статус в БД
+                    cursor.execute(
+                        "UPDATE premium_subscriptions SET is_active = FALSE WHERE user_id = ?",
+                        (user_id,)
+                    )
+                    conn.commit()
+
+            # Получаем информацию о кредитах
+            cursor.execute(
+                "SELECT daily_limit FROM user_credits WHERE user_id = ?",
+                (user_id,)
+            )
+            credit_info = cursor.fetchone()
+            daily_limit = credit_info["daily_limit"] if credit_info else 3
+
+            # Рассчитываем оставшиеся дни
+            days_remaining = None
+            if is_active and end_date:
+                end_datetime = datetime.fromisoformat(end_date)
+                days_remaining = (end_datetime - today).days
+
+            return PremiumStatusResponse(
+                user_id=user_id,
+                is_active=is_active,
+                start_date=start_date,
+                end_date=end_date,
+                days_remaining=days_remaining,
+                benefits={
+                    "ai_credits_per_day": daily_limit,
+                    "max_tests_per_day": "unlimited" if is_active else 50,
+                    "description": "Премиум доступ" if is_active else "Базовый доступ"
+                }
+            )
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/premium/cancel", tags=["premium"])
+async def cancel_premium(
+        user_id: str = Query(..., description="ID пользователя для отмены премиума")
+):
+    """Отменить премиум-подписку пользователя"""
+    try:
+        with db_connection() as conn:
+            cursor = conn.cursor()
+
+            # Устанавливаем is_active в FALSE
+            cursor.execute(
+                "UPDATE premium_subscriptions SET is_active = FALSE WHERE user_id = ?",
+                (user_id,)
+            )
+
+            # Возвращаем стандартный лимит кредитов (3 в день)
+            cursor.execute('''
+                UPDATE user_credits 
+                SET daily_limit = 3
+                WHERE user_id = ?
+            ''', (user_id,))
+
+            conn.commit()
+
+            return {
+                "status": "success",
+                "message": "Premium subscription cancelled",
+                "user_id": user_id
+            }
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+# Обновим функцию проверки лимитов тестов
+def check_test_limits(user_id: str) -> bool:
+    """Проверить, может ли пользователь пройти еще тест"""
+    with db_connection() as conn:
+        cursor = conn.cursor()
+
+        # Проверяем премиум-статус
+        cursor.execute(
+            "SELECT is_active, end_date FROM premium_subscriptions WHERE user_id = ?",
+            (user_id,)
+        )
+        premium = cursor.fetchone()
+
+        # У премиум-пользователей нет ограничений
+        if premium and premium["is_active"]:
+            end_date = datetime.fromisoformat(premium["end_date"])
+            if datetime.utcnow() <= end_date:
+                return True
+
+        # Для обычных пользователей проверяем лимит (50 тестов в день)
+        today = datetime.utcnow().date().isoformat()
+        cursor.execute('''
+            SELECT COUNT(*) as test_count 
+            FROM answers 
+            WHERE user_id = ? AND date(timestamp) = ?
+        ''', (user_id, today))
+
+        test_count = cursor.fetchone()["test_count"]
+        return test_count < 50
 
 
 # API endpoints
@@ -372,6 +674,256 @@ async def increment_visit(request: Request):
         json.dump(visits, f, ensure_ascii=False, indent=2)
 
     return {"status": "ok", "visit": visit_data}
+
+
+@app.post("/usage/update", tags=["time_limit"])
+async def update_usage_time(
+        user_id: str = Body(..., embed=True),
+        time_used: int = Body(0),
+        reset: bool = Body(False)
+):
+    print("time_used:" + str(time_used))
+    """Update user's time usage"""
+    try:
+        today = datetime.utcnow()
+
+        with db_connection() as conn:
+            cursor = conn.cursor()
+
+            # Check premium status first
+            cursor.execute(
+                "SELECT is_active, end_date FROM premium_subscriptions WHERE user_id = ?",
+                (user_id,)
+            )
+            premium = cursor.fetchone()
+            is_premium = False
+            if premium and premium["is_active"]:
+                end_date = datetime.fromisoformat(premium["end_date"])
+                is_premium = today <= end_date
+
+            # Premium users have no time limits
+            if is_premium:
+                return {
+                    "status": "success",
+                    "user_id": user_id,
+                    "is_premium": True,
+                    "message": "Premium user - no time limit applied"
+                }
+
+            # Get current time data
+            cursor.execute(
+                "SELECT remaining_time, last_update FROM user_time_limits WHERE user_id = ?",
+                (user_id,)
+            )
+            time_data = cursor.fetchone()
+
+            if time_data:
+                remaining_time = time_data["remaining_time"]
+                last_update = datetime.fromisoformat(time_data["last_update"])
+
+                # Reset if requested or if it's a new day
+                if reset or last_update.date() < today.date():
+                    remaining_time = 10  # 1 minute in seconds
+                else:
+                    remaining_time = max(0, remaining_time - 1)
+
+                # Update the record
+                cursor.execute(
+                    "UPDATE user_time_limits SET remaining_time = ?, last_update = ? WHERE user_id = ?",
+                    (remaining_time, today.isoformat(), user_id)
+                )
+            else:
+                # Create new record if doesn't exist
+                remaining_time = 60 - time_used if not reset else 60
+                cursor.execute(
+                    "INSERT INTO user_time_limits (user_id, remaining_time, last_update) VALUES (?, ?, ?)",
+                    (user_id, remaining_time, today.isoformat())
+                )
+
+            conn.commit()
+
+            return {
+                "status": "success",
+                "user_id": user_id,
+                "remaining_time": remaining_time,
+                "time_expired": remaining_time <= 0,
+                "last_update": today.isoformat()
+            }
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.get("/usage", tags=["time_limit"])
+async def get_usage_data(
+        user_id: str = Query(..., description="User ID")
+):
+    """Get current time usage data"""
+    try:
+        today = datetime.utcnow()
+
+        with db_connection() as conn:
+            cursor = conn.cursor()
+
+            # Check premium status
+            cursor.execute(
+                "SELECT is_active, end_date FROM premium_subscriptions WHERE user_id = ?",
+                (user_id,)
+            )
+            premium = cursor.fetchone()
+            is_premium = False
+            if premium and premium["is_active"]:
+                end_date = datetime.fromisoformat(premium["end_date"])
+                is_premium = today <= end_date
+
+            # Get time data
+            cursor.execute(
+                "SELECT remaining_time, last_update FROM user_time_limits WHERE user_id = ?",
+                (user_id,)
+            )
+            time_data = cursor.fetchone()
+
+            if time_data:
+                remaining_time = time_data["remaining_time"]
+                last_update = datetime.fromisoformat(time_data["last_update"])
+
+                # Reset if new day
+                if not is_premium and last_update.date() < today.date():
+                    remaining_time = 60
+                    cursor.execute(
+                        "UPDATE user_time_limits SET remaining_time = ?, last_update = ? WHERE user_id = ?",
+                        (remaining_time, today.isoformat(), user_id)
+                    )
+                    conn.commit()
+            else:
+                # Create new record
+                remaining_time = 60
+                cursor.execute(
+                    "INSERT INTO user_time_limits (user_id, remaining_time, last_update) VALUES (?, ?, ?)",
+                    (user_id, remaining_time, today.isoformat())
+                )
+                conn.commit()
+
+            return {
+                "user_id": user_id,
+                "remaining_time": remaining_time,
+                "is_premium": is_premium,
+                "time_expired": not is_premium and remaining_time <= 0,
+                "last_update": today.isoformat()
+            }
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.post("/usage/update", tags=["time_limit"])
+async def update_usage_data(
+        user_id: str = Body(..., description="ID пользователя"),
+        time_used: int = Body(0, description="Использованное время в секундах (по умолчанию 0)"),
+        reset: bool = Body(False, description="Сбросить таймер (по умолчанию False)")
+):
+    """Обновить данные об использовании времени"""
+    try:
+        today = datetime.utcnow()
+
+        with db_connection() as conn:
+            cursor = conn.cursor()
+
+            # Проверяем премиум-статус
+            cursor.execute(
+                "SELECT is_active, end_date FROM premium_subscriptions WHERE user_id = ?",
+                (user_id,)
+            )
+            premium = cursor.fetchone()
+            is_premium = False
+            if premium and premium["is_active"]:
+                end_date = datetime.fromisoformat(premium["end_date"])
+                is_premium = today <= end_date
+
+            # Если пользователь премиум, игнорируем обновление времени
+            if is_premium:
+                return {
+                    "status": "success",
+                    "message": "Premium user - time limit not applied",
+                    "user_id": user_id,
+                    "is_premium": True
+                }
+
+            # Получаем текущие данные
+            cursor.execute(
+                "SELECT remaining_time, last_update FROM user_time_limits WHERE user_id = ?",
+                (user_id,)
+            )
+            time_data = cursor.fetchone()
+
+            if time_data:
+                remaining_time = time_data["remaining_time"]
+                last_update = datetime.fromisoformat(time_data["last_update"])
+
+                # Если сброс запрошен или новый день
+                if reset or last_update.date() < today.date():
+                    remaining_time = 1800
+                else:
+                    remaining_time = max(0, remaining_time - time_used)
+
+                # Обновляем запись
+                cursor.execute(
+                    "UPDATE user_time_limits SET remaining_time = ?, last_update = ? WHERE user_id = ?",
+                    (remaining_time, today.isoformat(), user_id)
+                )
+            else:
+                # Создаем новую запись
+                remaining_time = 1800 - time_used if not reset else 1800
+                cursor.execute(
+                    "INSERT INTO user_time_limits (user_id, remaining_time, last_update) VALUES (?, ?, ?)",
+                    (user_id, remaining_time, today.isoformat())
+                )
+
+            conn.commit()
+
+            return {
+                "status": "success",
+                "user_id": user_id,
+                "remaining_time": remaining_time,
+                "time_expired": remaining_time <= 0,
+                "last_update": today.isoformat()
+            }
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.post("/usage/reset", tags=["time_limit"])
+async def reset_usage_data(
+        user_id: str = Body(..., description="ID пользователя для сброса времени")
+):
+    """Сбросить таймер использования времени"""
+    try:
+        today = datetime.utcnow()
+
+        with db_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute(
+                "UPDATE user_time_limits SET remaining_time = 1800, last_update = ? WHERE user_id = ?",
+                (today.isoformat(), user_id)
+            )
+
+            if cursor.rowcount == 0:
+                cursor.execute(
+                    "INSERT INTO user_time_limits (user_id, remaining_time, last_update) VALUES (?, ?, ?)",
+                    (user_id, 1800, today.isoformat())
+                )
+
+            conn.commit()
+
+            return {
+                "status": "success",
+                "user_id": user_id,
+                "remaining_time": 1800,
+                "last_update": today.isoformat()
+            }
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 # Authentication endpoints
@@ -521,6 +1073,7 @@ async def exchange_code(request: CodeExchangeRequest):
             f"&picture={payload.get('picture')}"
     )
 
+
 async def chat_completion(messages: list, model: str = "google/gemma-3-27b-it:free") -> dict:
     """Robust OpenRouter API call with proper error handling"""
     key = get_active_key()
@@ -557,6 +1110,7 @@ async def chat_completion(messages: list, model: str = "google/gemma-3-27b-it:fr
     except Exception as e:
         logger.error(f"OpenRouter API error: {str(e)}")
         raise HTTPException(status_code=502, detail="AI service unavailable")
+
 
 # Default system prompt for PDR questions
 DEFAULT_SYSTEM_PROMPT = {
@@ -613,9 +1167,11 @@ async def verify_keys(admin_token: str = Query(...)):
 
     return {"results": results}
 
+
 def validate_key_format(key: str) -> bool:
     """Validate OpenRouter key format"""
     return key.startswith("sk-or-v1-") and len(key) > 30
+
 
 def get_openrouter_headers(key: str) -> dict:
     """Proper OpenRouter headers with required fields"""
@@ -625,6 +1181,7 @@ def get_openrouter_headers(key: str) -> dict:
         "X-Title": "Impulse PDR",  # Required by OpenRouter
         "Content-Type": "application/json"
     }
+
 
 @app.get("/pdr/ai-health", tags=["ai"])
 async def check_ai_health():
@@ -652,12 +1209,13 @@ async def check_ai_health():
 
 @app.post("/pdr/question")
 async def ask_pdr_question(
-    request: PDRQuestionRequest,
-    user_id: str = Query(...)
+        request: PDRQuestionRequest,
+        user_id: str = Query(...)
 ):
     try:
         messages = [
-            {"role": "user", "content": f"prompt: {DEFAULT_SYSTEM_PROMPT}, content:{request.context}\n\n{request.question}"}
+            {"role": "user",
+             "content": f"prompt: {DEFAULT_SYSTEM_PROMPT}, content:{request.context}\n\n{request.question}"}
         ]
 
         response = await api_client.call_api(messages)
@@ -695,6 +1253,7 @@ async def get_key_status(admin_token: str = Query(...)):
         })
 
     return {"keys": keys_status}
+
 
 # User endpoints
 @app.get("/users", tags=["users"])
@@ -1005,7 +1564,7 @@ async def get_image(
 
 # User progress endpoints
 @app.get("/user/progress", tags=["progress"])
-async def get_progress(user_id: str = Query(...)):
+async def get_progress(user_id: str = Query(..., description="User ID")):
     """Get user's overall progress"""
     with db_connection() as conn:
         cursor = conn.cursor()
@@ -1173,9 +1732,9 @@ async def submit_answer(payload: UserAnswerPayload):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.post("/user/favorites/add", tags=["actions"])
-async def add_favorite(payload: FavoritePayload):
-    """Add question to user's favorites"""
+@app.post("/user/favorites/toggle", tags=["actions"])
+async def toggle_favorite(payload: FavoritePayload):
+    """Toggle favorite status for a question"""
     try:
         with db_connection() as conn:
             cursor = conn.cursor()
@@ -1186,30 +1745,28 @@ async def add_favorite(payload: FavoritePayload):
                 (payload.user_id, "User", datetime.utcnow().isoformat())
             )
 
-            # Add favorite
+            # Check current status
             cursor.execute(
-                "INSERT OR IGNORE INTO favorites (user_id, question_id) VALUES (?, ?)",
+                "SELECT 1 FROM favorites WHERE user_id = ? AND question_id = ?",
                 (payload.user_id, payload.question_id)
             )
+            is_favorite = cursor.fetchone() is not None
+
+            if is_favorite:
+                cursor.execute(
+                    "DELETE FROM favorites WHERE user_id = ? AND question_id = ?",
+                    (payload.user_id, payload.question_id)
+                )
+                action = "removed"
+            else:
+                cursor.execute(
+                    "INSERT OR IGNORE INTO favorites (user_id, question_id) VALUES (?, ?)",
+                    (payload.user_id, payload.question_id)
+                )
+                action = "added"
 
             conn.commit()
-            return {"status": "ok", "message": "Favorite added"}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
-
-
-@app.post("/user/favorites/remove", tags=["actions"])
-async def remove_favorite(payload: FavoritePayload):
-    """Remove question from user's favorites"""
-    try:
-        with db_connection() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "DELETE FROM favorites WHERE user_id = ? AND question_id = ?",
-                (payload.user_id, payload.question_id)
-            )
-            conn.commit()
-            return {"status": "ok", "message": "Favorite removed"}
+            return {"status": "ok", "action": action}
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -1262,6 +1819,7 @@ def init_user_credits(user_id: str) -> bool:
         return True
 
 
+# Обновим функцию get_user_credit_info для учета премиума
 def get_user_credit_info(user_id: str) -> Optional[dict]:
     """Get user's credit information with auto-reset"""
     if not init_user_credits(user_id):
@@ -1270,31 +1828,50 @@ def get_user_credit_info(user_id: str) -> Optional[dict]:
     with db_connection() as conn:
         cursor = conn.cursor()
 
+        # Проверяем премиум-статус
+        cursor.execute(
+            "SELECT is_active, end_date FROM premium_subscriptions WHERE user_id = ?",
+            (user_id,)
+        )
+        premium = cursor.fetchone()
+
+        is_premium = False
+        if premium and premium["is_active"]:
+            end_date = datetime.fromisoformat(premium["end_date"])
+            is_premium = datetime.utcnow() <= end_date
+            if not is_premium:
+                # Если подписка истекла, обновляем статус
+                cursor.execute(
+                    "UPDATE premium_subscriptions SET is_active = FALSE WHERE user_id = ?",
+                    (user_id,)
+                )
+
         # Get current date in UTC
         today = datetime.utcnow().date().isoformat()
-        # Check if credit reset is needed
-        cursor.execute('''
-                    SELECT last_reset_date, daily_limit, credits_used 
-                    FROM user_credits 
-                    WHERE user_id = ?
-                ''', (user_id,))
 
-        row = cursor.fetchone()
-        if not row:
-            return None
-
-        last_reset, daily_limit, credits_used = row
+        # Для премиум-пользователей устанавливаем лимит 10, для остальных - 3
+        default_limit = 10 if is_premium else 3
 
         # Reset if new day
-        if last_reset != today:
-            cursor.execute('''
-                        UPDATE user_credits 
-                        SET credits_used = 0, 
-                            last_reset_date = ?
-                        WHERE user_id = ?
-                    ''', (today, user_id))
-            conn.commit()
-            credits_used = 0
+        cursor.execute('''
+            UPDATE user_credits 
+            SET 
+                credits_used = CASE 
+                    WHEN last_reset_date != ? THEN 0 
+                    ELSE credits_used 
+                END,
+                daily_limit = ?,
+                last_reset_date = ?
+            WHERE user_id = ?
+            RETURNING daily_limit, credits_used, last_reset_date
+        ''', (today, default_limit, today, user_id))
+
+        result = cursor.fetchone()
+        if not result:
+            return None
+
+        daily_limit, credits_used, last_reset = result
+        conn.commit()
 
         return {
             'user_id': user_id,
@@ -1302,7 +1879,8 @@ def get_user_credit_info(user_id: str) -> Optional[dict]:
             'credits_used': credits_used,
             'credits_remaining': max(0, daily_limit - credits_used),
             'last_reset_date': today if last_reset != today else last_reset,
-            'next_reset_time': '00:00:00 UTC'  # Reset time
+            'is_premium': is_premium,
+            'max_tests_per_day': "unlimited" if is_premium else 50
         }
 
 
