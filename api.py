@@ -226,18 +226,14 @@ class PremiumStatusResponse(BaseModel):
 
 
 MUTED_KEYS: Dict[str, datetime] = {}
-KEY_ROTATION_FILE = "keys.json"
-KEY_FILE = Path(os.getenv("KEY_FILE", "keys.json"))
 # Update these constants at the top of your file
 KEY_MUTE_DURATION = timedelta(minutes=15)  # Reduced from 1 hour to 15 minutes
 MAX_RETRIES = 3  # Maximum retries with different keys
 
-
 def load_keys() -> List[str]:
     try:
-        with open("keys.json") as f:
-            data = json.load(f)
-        keys = data.get("api_keys", [])
+        raw_keys = os.getenv("API_KEYS", "")
+        keys = [k.strip() for k in raw_keys.split(",") if k.strip()]
         valid_keys = [k for k in keys if k.startswith("sk-or-v1-")]
         return valid_keys
     except Exception as e:
