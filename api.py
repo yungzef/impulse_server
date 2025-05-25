@@ -71,6 +71,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Database setup
 def init_db():
     """Initialize database with required tables"""
@@ -167,9 +168,11 @@ class UsageUpdate(BaseModel):
     remaining_time: int
     is_premium: bool
 
+
 # Models
 class UserRequest(BaseModel):
     user_id: str
+
 
 class UserAnswerPayload(BaseModel):
     question_id: str
@@ -228,6 +231,7 @@ MUTED_KEYS: Dict[str, datetime] = {}
 # Update these constants at the top of your file
 KEY_MUTE_DURATION = timedelta(minutes=15)  # Reduced from 1 hour to 15 minutes
 MAX_RETRIES = 3  # Maximum retries with different keys
+
 
 def load_keys() -> List[str]:
     try:
@@ -377,8 +381,8 @@ def get_question_by_id(question_id: str) -> Optional[Dict]:
 # Эндпоинты для работы с премиум-доступом
 @app.post("/premium/activate", tags=["premium"])
 async def activate_premium(
-    request: PremiumActivationRequest,
-    admin_token: str = Query(None, description="Токен администратора для выдачи премиума")
+        request: PremiumActivationRequest,
+        admin_token: str = Query(None, description="Токен администратора для выдачи премиума")
 ):
     if admin_token and admin_token != Config.ADMIN_TOKEN:
         raise HTTPException(status_code=403, detail="Forbidden")
@@ -748,6 +752,7 @@ async def update_usage_time(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+
 @app.get("/usage", tags=["time_limit"])
 async def get_usage_data(
         user_id: str = Query(..., description="User ID")
@@ -808,6 +813,7 @@ async def get_usage_data(
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
 
 @app.post("/usage/update", tags=["time_limit"])
 async def update_usage_data(
@@ -1218,6 +1224,13 @@ async def ask_pdr_question(
         if "choices" not in response or not response["choices"]:
             logger.error(f"Invalid OpenRouter response: {response}")
             raise HTTPException(status_code=502, detail="Invalid response from language model")
+
+            # Только после успешного ответа используем кредит
+        if not use_credit(user_id):
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to update credit count"
+            )
 
         return {
             "answer": response["choices"][0]["message"]["content"],
