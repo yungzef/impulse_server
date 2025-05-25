@@ -76,7 +76,7 @@ class OpenRouterAPIClient:
 
         async with httpx.AsyncClient(timeout=self.timeout) as client:
             response = await client.post(
-                "https://openrouter.ai/api/v1/chat/completions",
+                "https://openrouter.ai/api/v1/completions",
                 headers=headers,
                 json=payload
             )
