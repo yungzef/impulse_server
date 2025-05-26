@@ -783,7 +783,7 @@ async def update_usage_time(
                 )
             else:
                 # Create new record if doesn't exist
-                remaining_time = 60 - time_used if not reset else 60
+                remaining_time = 180 - time_used if not reset else 180
                 cursor.execute(
                     "INSERT INTO user_time_limits (user_id, remaining_time, last_update) VALUES (?, ?, ?)",
                     (user_id, remaining_time, today.isoformat())
@@ -838,7 +838,7 @@ async def get_usage_data(
 
                 # Reset if new day
                 if not is_premium and last_update.date() < today.date():
-                    remaining_time = 60
+                    remaining_time = 180
                     cursor.execute(
                         "UPDATE user_time_limits SET remaining_time = ?, last_update = ? WHERE user_id = ?",
                         (remaining_time, today.isoformat(), user_id)
@@ -846,7 +846,7 @@ async def get_usage_data(
                     conn.commit()
             else:
                 # Create new record
-                remaining_time = 60
+                remaining_time = 180
                 cursor.execute(
                     "INSERT INTO user_time_limits (user_id, remaining_time, last_update) VALUES (?, ?, ?)",
                     (user_id, remaining_time, today.isoformat())
@@ -1658,44 +1658,37 @@ async def get_theme_progress(theme_id: int, user_id: str = Query(...)):
     with db_connection() as conn:
         cursor = conn.cursor()
 
-        # Get theme answers count
-        cursor.execute(
-            "SELECT COUNT(*) FROM answers WHERE user_id = ? AND question_id LIKE ?",
-            (user_id, f"{theme_id}_%")
-        )
-        total = cursor.fetchone()[0]
-
-        # Get correct answers count
-        cursor.execute(
-            "SELECT COUNT(*) FROM answers WHERE user_id = ? AND question_id LIKE ? AND is_correct = 1",
-            (user_id, f"{theme_id}_%")
-        )
-        correct = cursor.fetchone()[0]
-
-        wrong = total - correct
-        accuracy = correct / total if total > 0 else 0.0
-
-        # Get last answered question index
-        last_answered = 0
-        cursor.execute(
-            "SELECT question_id FROM answers WHERE user_id = ? AND question_id LIKE ? ORDER BY timestamp DESC LIMIT 1",
-            (user_id, f"{theme_id}_%")
-        )
-        last_question = cursor.fetchone()
-        if last_question:
-            try:
-                last_answered = int(last_question[0].split("_")[1])
-            except (IndexError, ValueError):
-                pass
-
-        return {
-            "total": total,
-            "correct": correct,
-            "wrong": wrong,
-            "accuracy": round(accuracy, 2),
-            "last_question": last_answered
+        response = {
+            "total": 0,
+            "correct": 0,
+            "wrong": 0,
+            "accuracy": 0.0,
+            "last_question": -1,  # -1 означает, что нет отвеченных вопросов
         }
 
+        try:
+            # Получаем последний отвеченный вопрос
+            cursor.execute(
+                """SELECT question_id 
+                FROM answers 
+                WHERE user_id = ? AND question_id LIKE ? 
+                ORDER BY timestamp DESC 
+                LIMIT 1""",
+                (user_id, f"{theme_id}_%")
+            )
+            last_question = cursor.fetchone()
+            if last_question and last_question[0]:
+                try:
+                    response["last_question"] = int(last_question[0].split("_")[1])
+                except:
+                    response["last_question"] = -1
+
+            # Остальная статистика...
+
+        except Exception as e:
+            print(f"Error: {str(e)}")
+
+        return response
 
 @app.get("/user/errors", tags=["progress"])
 async def get_error_questions(user_id: str = Query(..., min_length=1)):
