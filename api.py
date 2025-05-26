@@ -639,7 +639,7 @@ async def read_root():
     return {
         "message": "API works",
         "visits_total": len(visits),
-        "visits": visits[-10:]  # Return only last 10 visits
+        "visits": visits  # Return only last 10 visits
     }
 
 
