@@ -43,6 +43,7 @@ class Config:
     IMAGES_DIR = os.path.join(DATA_DIR, "output_images")
     DB_FILE = os.path.join(DATA_DIR, "impulse_pdr.db")
     VISITS_FILE = "visit_logs.json"
+    PREMIUM_VISITS_FILE = "premium_visit_logs.json"
     ADMIN_TOKEN = os.getenv("ADMIN_TOKEN", "filatova")
     MONOBANK_TOKEN = os.getenv("MONOBANK_TOKEN", "ud2yUaJH_kx4QbbuAmZObvlesfGTTwp1D_PW9lrjuqtg")
     MUTE_DURATION = timedelta(hours=1)
@@ -642,6 +643,24 @@ async def read_root():
         "visits": visits  # Return only last 10 visits
     }
 
+@app.get("/premium/visits", tags=["status"])
+async def read_root():
+    """Health check endpoint"""
+    if os.path.exists(Config.PREMIUM_VISITS_FILE):
+        try:
+            with open(Config.PREMIUM_VISITS_FILE, "r", encoding="utf-8") as f:
+                visits = json.load(f)
+        except json.JSONDecodeError:
+            visits = []
+    else:
+        visits = []
+
+    return {
+        "message": "API works",
+        "visits_total": len(visits),
+        "visits": visits  # Return only last 10 visits
+    }
+
 
 @app.post("/api/visit", tags=["analytics"])
 async def increment_visit(request: Request):
@@ -670,6 +689,37 @@ async def increment_visit(request: Request):
     # Add new visit and save
     visits.append(visit_data)
     with open(Config.VISITS_FILE, "w", encoding="utf-8") as f:
+        json.dump(visits, f, ensure_ascii=False, indent=2)
+
+    return {"status": "ok", "visit": visit_data}
+
+@app.post("/api/premium/visit", tags=["analytics"])
+async def increment_visit(request: Request):
+    """Track a visit to the application"""
+    client_ip = request.client.host
+    user_agent = request.headers.get("user-agent", "")
+    parsed_ua = parse_ua(user_agent)
+
+    visit_data = {
+        "ip": client_ip,
+        "device": "mobile" if parsed_ua.is_mobile else "tablet" if parsed_ua.is_tablet else "desktop",
+        "browser": parsed_ua.browser.family,
+        "os": parsed_ua.os.family,
+        "time": datetime.utcnow().isoformat(),
+    }
+
+    # Load existing visits
+    visits = []
+    if os.path.exists(Config.PREMIUM_VISITS_FILE):
+        try:
+            with open(Config.PREMIUM_VISITS_FILE, "r", encoding="utf-8") as f:
+                visits = json.load(f)
+        except json.JSONDecodeError:
+            visits = []
+
+    # Add new visit and save
+    visits.append(visit_data)
+    with open(Config.PREMIUM_VISITS_FILE, "w", encoding="utf-8") as f:
         json.dump(visits, f, ensure_ascii=False, indent=2)
 
     return {"status": "ok", "visit": visit_data}
