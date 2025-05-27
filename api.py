@@ -50,8 +50,8 @@ class Config:
 
 
 AMOUNT_TO_DAYS = {
-    100: 7,  # 99 грн
-    199_00: 30,  # 199 грн
+    99_00: 7,  # 99 грн
+    99_00: 30,  # 199 грн
     399_00: 90  # 399 грн
 }
 
@@ -147,6 +147,19 @@ def init_db():
 
         conn.commit()
 
+# Добавим таблицу для хранения рекомендаций
+def init_recommendations_table():
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_recommendations (
+            user_id TEXT PRIMARY KEY,
+            recommendations TEXT,
+            last_updated TEXT,
+            FOREIGN KEY(user_id) REFERENCES users(user_id)
+        )
+        ''')
+        conn.commit()
 
 # Database connection helper
 @contextmanager
@@ -162,7 +175,7 @@ def db_connection():
 
 # Initialize database
 init_db()
-
+init_recommendations_table()
 
 class UsageUpdate(BaseModel):
     user_id: str
@@ -507,6 +520,9 @@ async def get_premium_status(
                 return PremiumStatusResponse(
                     user_id=user_id,
                     is_active=False,
+                    start_date=None,
+                    end_date=None,
+                    days_remaining=None,
                     benefits={
                         "ai_credits_per_day": 3,
                         "max_tests_per_day": 50,
@@ -623,6 +639,113 @@ def check_test_limits(user_id: str) -> bool:
         test_count = cursor.fetchone()["test_count"]
         return test_count < 50
 
+
+@app.get("/user/detailed-stats", tags=["stats"])
+async def get_detailed_stats(user_id: str):
+    """
+    Возвращает максимально подробную статистику пользователя.
+    Запрашивает рекомендации у ИИ не чаще одного раза в сутки.
+    """
+    try:
+        # Получаем базовую статистику
+        progress = get_user_progress(user_id)
+
+        # Получаем информацию о кредитах
+        credit_info = get_user_credit_info(user_id)
+
+        # Получаем статус премиума
+        premium_status = await get_premium_status(user_id)
+
+        # Получаем топ ошибок
+        top_errors = get_top_errors(user_id)
+
+        # Получаем избранные вопросы
+        favorites = await get_favorites(user_id)
+
+        # Формируем базовый ответ
+        response = {
+            "user_id": user_id,
+            "progress": progress,
+            "credit_info": credit_info,
+            "premium_status": premium_status,
+            "top_errors": top_errors[:10],  # Берем топ-10 ошибок
+            "favorites_count": len(favorites),
+            "last_updated": datetime.utcnow().isoformat()
+        }
+
+        # Проверяем, нужно ли обновлять рекомендации
+        with db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT recommendations, last_updated FROM user_recommendations WHERE user_id = ?",
+                (user_id,)
+            )
+            recommendation_data = cursor.fetchone()
+
+            need_update = True
+            if recommendation_data:
+                last_updated = datetime.fromisoformat(recommendation_data["last_updated"])
+                need_update = (datetime.utcnow() - last_updated) > timedelta(days=1)
+                response["recommendations"] = recommendation_data["recommendations"]
+
+            # Если нужно обновить или рекомендаций еще нет
+            if need_update or not recommendation_data:
+                # Формируем запрос к ИИ
+                ai_prompt = (
+                    f"Пользователь с ID {user_id} имеет следующую статистику:\n"
+                    f"- Всего отвечено вопросов: {progress['total']}\n"
+                    f"- Правильных ответов: {progress['correct']} ({progress['accuracy']:.1%})\n"
+                    f"- Серия правильных ответов подряд: {progress['streak']}\n"
+                    f"- Тем с прогрессом: {progress['themes']}\n"
+                    f"\nТоп ошибок пользователя:\n"
+                )
+
+                for i, error in enumerate(top_errors[:5], 1):
+                    ai_prompt += f"{i}. {error['question']['question']} (ошибок: {error['error_count']})\n"
+
+                ai_prompt += (
+                    "\nДайте краткие рекомендации (3-5 пунктов) по улучшению результатов, "
+                    "основываясь на этой статистике. Говорите на украинском языке."
+                )
+
+                # Запрашиваем рекомендации у ИИ
+                try:
+                    ai_response = await call_openrouter(
+                        messages=[
+                            {"role": "system", "content": "Ты помощник для подготовки к экзамену по ПДР."},
+                            {"role": "user", "content": ai_prompt}
+                        ],
+                        model="google/gemma-3-27b-it:free"
+                    )
+
+                    recommendations = ai_response["choices"][0]["message"]["content"]
+
+                    # Сохраняем рекомендации
+                    now = datetime.utcnow().isoformat()
+                    with db_connection() as conn:
+                        cursor = conn.cursor()
+                        cursor.execute('''
+                            INSERT OR REPLACE INTO user_recommendations 
+                            (user_id, recommendations, last_updated)
+                            VALUES (?, ?, ?)
+                        ''', (user_id, recommendations, now))
+                        conn.commit()
+
+                    response["recommendations"] = recommendations
+                    response["recommendations_updated"] = True
+                except Exception as e:
+                    # Если не удалось получить рекомендации, используем старые или заглушку
+                    if recommendation_data:
+                        response["recommendations"] = recommendation_data["recommendations"]
+                        response["recommendations_updated"] = False
+                    else:
+                        response["recommendations"] = "Не удалось загрузить рекомендации. Попробуйте позже."
+                        response["recommendations_updated"] = False
+
+        return response
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # API endpoints
 @app.get("/", tags=["status"])
@@ -1465,6 +1588,21 @@ async def get_themes(user_id: Optional[str] = None):
             })
     return sorted(themes, key=lambda x: x["index"])
 
+@app.get("/themes/preview", tags=["questions"])
+async def get_themes_preview(user_id: Optional[str] = None):
+    """Get all available themes without questions field"""
+    themes = []
+    for file in glob.glob(os.path.join(Config.THEMES_DIR, "*.json")):
+        with open(file, "r", encoding="utf-8") as f:
+            theme_data = json.load(f)
+            themes.append({
+                "index": int(theme_data.get("index", 0)),
+                "name": str(theme_data.get("name", "")),
+                "question_count": len(theme_data.get("questions", [])),
+                "last_answered_index": theme_data.get("last_answered_index"),
+                "accuracy": theme_data.get("accuracy"),
+            })
+    return sorted(themes, key=lambda x: x["index"])
 
 @app.get("/themes/{theme_id}", tags=["questions"])
 async def get_theme_by_id(
@@ -1623,34 +1761,53 @@ async def get_image(
 # User progress endpoints
 @app.get("/user/progress", tags=["progress"])
 async def get_progress(user_id: str = Query(..., description="User ID")):
-    """Get user's overall progress"""
+    return get_user_progress(user_id)
+
+def get_user_progress(user_id: str):
     with db_connection() as conn:
         cursor = conn.cursor()
 
-        # Get total answers count
-        cursor.execute(
-            "SELECT COUNT(*) FROM answers WHERE user_id = ?",
-            (user_id,)
-        )
+        cursor.execute('''
+            SELECT COUNT(*) FROM answers WHERE user_id = ?
+        ''', (user_id,))
         total = cursor.fetchone()[0]
 
-        # Get correct answers count
-        cursor.execute(
-            "SELECT COUNT(*) FROM answers WHERE user_id = ? AND is_correct = 1",
-            (user_id,)
-        )
+        cursor.execute('''
+            SELECT COUNT(*) FROM answers WHERE user_id = ? AND is_correct = 1
+        ''', (user_id,))
         correct = cursor.fetchone()[0]
 
         wrong = total - correct
         accuracy = correct / total if total > 0 else 0.0
 
-        return {
-            "total": total,
-            "correct": correct,
-            "wrong": wrong,
-            "accuracy": round(accuracy, 2)
-        }
+        # Серия подряд правильных
+        cursor.execute('''
+            SELECT is_correct FROM answers
+            WHERE user_id = ?
+            ORDER BY timestamp DESC
+        ''', (user_id,))
+        streak = 0
+        for (is_correct,) in cursor.fetchall():
+            if is_correct == 1:
+                streak += 1
+            else:
+                break
 
+        # Кол-во тем с прогрессом
+        cursor.execute('''
+            SELECT COUNT(DISTINCT substr(question_id, 0, instr(question_id, ":")))
+            FROM answers WHERE user_id = ?
+        ''', (user_id,))
+        themes = cursor.fetchone()[0]
+
+        return {
+            'total': total,
+            'correct': correct,
+            'wrong': wrong,
+            'accuracy': accuracy,
+            'streak': streak,
+            'themes': themes,
+        }
 
 @app.get("/theme/progress", tags=["progress"])
 async def get_theme_progress(theme_id: int, user_id: str = Query(...)):
@@ -1719,6 +1876,43 @@ async def get_error_questions(user_id: str = Query(..., min_length=1)):
     except Exception as e:
         return {"questions": []}
 
+@app.get("/user/top-errors", tags=["progress"])
+def get_top_errors(user_id: str):
+    """
+    Return up to 100 most frequent wrong questions with full data
+    """
+    with db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute('''
+            SELECT question_id, COUNT(*) as error_count
+            FROM answers
+            WHERE user_id = ? AND is_correct = 0
+            GROUP BY question_id
+            ORDER BY error_count DESC
+            LIMIT 100
+        ''', (user_id,))
+        error_counts = cursor.fetchall()
+
+    error_map = {row[0]: row[1] for row in error_counts}
+    result = []
+
+    for filename in os.listdir(Config.THEMES_DIR):
+        if not filename.endswith('.json'):
+            continue
+        with open(os.path.join(Config.THEMES_DIR, filename), encoding='utf-8') as f:
+            theme = json.load(f)
+            theme_index = str(theme.get("index"))
+            for idx, q in enumerate(theme.get("questions", [])):
+                qid = f"{theme_index}:{idx}"
+                if qid in error_map:
+                    result.append({
+                        "question": q,
+                        "question_id": qid,
+                        "theme_index": int(theme_index),
+                        "error_count": error_map[qid]
+                    })
+
+    return result
 
 @app.get("/user/favorites", tags=["progress"])
 async def get_favorites(user_id: str):
