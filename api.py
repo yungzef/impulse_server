@@ -51,9 +51,9 @@ class Config:
 
 
 AMOUNT_TO_DAYS = {
-    99: 7,  # 99 грн
-    199_00: 30,  # 199 грн
-    399_00: 90  # 399 грн
+    49_00: 7,  # 29 грн
+    99_00: 30,  # 99 грн
+    199_00: 90  # 199 грн
 }
 
 # Create directories if they don't exist
