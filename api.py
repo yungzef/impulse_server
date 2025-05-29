@@ -1,4 +1,5 @@
 import asyncio
+import re
 from pathlib import Path
 import httpx
 import jwt
@@ -50,9 +51,9 @@ class Config:
 
 
 AMOUNT_TO_DAYS = {
-    99_00: 7,  # 99 грн
+    9: 7,  # 99 грн
     99_00: 30,  # 199 грн
-    399_00: 90  # 399 грн
+    199_00: 90  # 399 грн
 }
 
 # Create directories if they don't exist
@@ -225,10 +226,20 @@ class CreditInfoResponse(BaseModel):
     last_reset_date: str
 
 
-# Модель для запроса премиум-доступа
 class PremiumActivationRequest(BaseModel):
-    user_id: str
-    duration_days: int = 30  # По умолчанию 30 дней премиума
+    user_id: int
+    invoice_id: str
+
+
+class MonobankWebhookPayload(BaseModel):
+    invoiceId: str
+    status: str  # example: 'success'
+    amount: int
+    ccy: int
+    reference: Optional[str] = None
+    createdDate: Optional[str] = None
+    modifiedDate: Optional[str] = None
+
 
 
 # Модель для ответа о статусе премиума
@@ -391,71 +402,108 @@ def get_question_by_id(question_id: str) -> Optional[Dict]:
     except (ValueError, IndexError, FileNotFoundError):
         return None
 
+@app.post("/webhooks/monobank", tags=["webhooks"])
+async def monobank_webhook(request: Request):
+    try:
+        data = await request.json()
+        logger.info(f"🔥 Вебхук Monobank: {data}")
 
-# Эндпоинты для работы с премиум-доступом
-@app.post("/premium/activate", tags=["premium"])
-async def activate_premium(
-        request: PremiumActivationRequest,
-        admin_token: str = Query(None, description="Токен администратора для выдачи премиума")
-):
-    if admin_token and admin_token != Config.ADMIN_TOKEN:
-        raise HTTPException(status_code=403, detail="Forbidden")
+        status = data.get("status")
+        amount = data.get("amount")
+        ccy = data.get("ccy")
+        reference = data.get("reference")
+        invoice_id = data.get("invoiceId")
 
-    mono_token = Config.MONOBANK_TOKEN
-    if not mono_token:
-        raise HTTPException(status_code=500, detail="Missing Monobank API token")
+        # Проверка на успешную оплату
+        if status != "success":
+            logger.warning(f"⛔ Платіж неуспішний: статус = {status}")
+            raise HTTPException(status_code=400, detail="Платіж ще не завершений")
 
-    headers = {"X-Token": mono_token}
-    from_time = int((datetime.utcnow() - timedelta(minutes=5)).timestamp())
-    time_threshold = datetime.utcnow() - timedelta(minutes=5)
+        # Проверка валюты
+        if ccy != 980:
+            logger.warning(f"⛔ Валюта не гривня: ccy = {ccy}")
+            raise HTTPException(status_code=400, detail="Непідтримувана валюта")
 
-    seen_transaction_ids = set()
+        # Проверка допустимой суммы
+        duration_days = AMOUNT_TO_DAYS.get(amount)
+        if not duration_days:
+            logger.warning(f"⛔ Непідтримувана сума платежу: {amount}")
+            raise HTTPException(status_code=400, detail="Невірна сума")
 
-    for _ in range(10):
-        async with httpx.AsyncClient() as client:
-            try:
-                resp = await client.get(
-                    f"https://api.monobank.ua/personal/statement/HDQfo6IhRAydq1npwDgvAw/{from_time}",
-                    headers=headers
-                )
-                await resp.aread()
-                data = resp.json()
+        # Извлекаем user_id из reference
+        match = re.match(r"^premium_(\d+)_", reference or "")
+        if not match:
+            logger.warning(f"⛔ Невірний формат reference: {reference}")
+            raise HTTPException(status_code=400, detail="Невірний формат посилання")
 
-                print(resp.status_code, resp.text)
+        user_id = match.group(1)
+        logger.info(f"✅ Отримано user_id з reference: {user_id}")
 
-                if not isinstance(data, list):
-                    raise HTTPException(status_code=400, detail=f"Invalid response from Monobank: {data}")
+        # Проверка, был ли уже обработан invoice_id (опционально — нужна таблица processed_invoices)
+        # if is_invoice_already_processed(invoice_id):
+        #     logger.info(f"⚠️ Інвойс {invoice_id} вже оброблений")
+        #     return {"status": "already_processed"}
 
-                for txn in data:
-                    txn_id = txn.get("id")
-                    if txn_id in seen_transaction_ids:
-                        continue
-                    seen_transaction_ids.add(txn_id)
+        # Выдача премиума
+        success = grant_premium_to_user(user_id=user_id, duration_days=duration_days)
+        if success:
+            logger.info(f"✅ Преміум успішно активовано для user_id={user_id} на {duration_days} днів")
+        else:
+            logger.error(f"❌ Не вдалося активувати преміум для user_id={user_id}")
+            raise HTTPException(status_code=500, detail="Не вдалося активувати преміум")
 
-                    txn_time_unix = txn.get("time")
-                    if not txn_time_unix:
-                        continue
+        # Здесь можно сохранить обработанный invoice_id, чтобы избежать повторов
 
-                    txn_time = datetime.utcfromtimestamp(txn_time_unix)
-                    if txn_time < time_threshold:
-                        continue  # игнорируем старые транзакции
+        return {"status": "ok"}
 
-                    if txn.get("operationAmount") < 0:
-                        continue
+    except Exception as e:
+        logger.exception(f"❌ Помилка у вебхуку Monobank: {e}")
+        raise HTTPException(status_code=500, detail="Internal Server Error")
 
-                    amount = abs(txn.get("amount", 0))
-                    duration_days = AMOUNT_TO_DAYS.get(amount)
-                    if duration_days:
-                        return await _grant_premium(request.user_id, duration_days)
 
-                from_time = int(datetime.utcnow().timestamp())
+def grant_premium_to_user(user_id: str, duration_days: int) -> bool:
+    """Активировать или продлить премиум-подписку для пользователя"""
+    now = datetime.utcnow()
+    try:
+        with sqlite3.connect(Config.DB_FILE) as conn:
+            cursor = conn.cursor()
 
-            except Exception as e:
-                raise HTTPException(status_code=400, detail=f"Monobank API error: {str(e)}")
+            # Получаем текущую подписку, если есть
+            cursor.execute('''
+                SELECT is_active, end_date FROM premium_subscriptions WHERE user_id = ?
+            ''', (user_id,))
+            row = cursor.fetchone()
 
-        await asyncio.sleep(30)
+            if row:
+                is_active, end_date_str = row
+                if is_active and end_date_str:
+                    try:
+                        end_date = datetime.strptime(end_date_str, "%Y-%m-%dT%H:%M:%S")
+                    except ValueError:
+                        end_date = now
+                    new_end_date = max(end_date, now) + timedelta(days=duration_days)
+                else:
+                    new_end_date = now + timedelta(days=duration_days)
 
-    raise HTTPException(status_code=408, detail="Поповнення не виявлено")
+                cursor.execute('''
+                    UPDATE premium_subscriptions
+                    SET is_active = 1,
+                        start_date = ?,
+                        end_date = ?
+                    WHERE user_id = ?
+                ''', (now.isoformat(), new_end_date.isoformat(), user_id))
+            else:
+                new_end_date = now + timedelta(days=duration_days)
+                cursor.execute('''
+                    INSERT INTO premium_subscriptions (user_id, is_active, start_date, end_date)
+                    VALUES (?, 1, ?, ?)
+                ''', (user_id, now.isoformat(), new_end_date.isoformat()))
+
+            conn.commit()
+        return True
+    except Exception as e:
+        print(f"❌ Ошибка при продлении подписки: {e}")
+        return False
 
 
 async def _grant_premium(user_id: str, duration_days: int):
