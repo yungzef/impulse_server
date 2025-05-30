@@ -13,8 +13,7 @@
       ],
       "correct_answer": "Буксирування на гнучкому зчепленні.",
       "correct_index": 0,
-      "image": "output_images/30_01.jpeg",
-      "explanation": "Розділ 28, пункт 28.3:\n<p><strong>28.3</strong> На гірських дорогах заборонено:</p>\n<p><strong>а)</strong> рухатися з непрацюючим двигуном та вимкненими зчепленням або передачею;</p>\n<p><strong>б)</strong> буксирування на гнучкому зчепленні;</p>\n<p><strong>в)</strong> будь-яке буксирування під час ожеледиці.</p>"
+      "image": "output_images/30_01.jpeg"
     },
     {
       "question": "На гірських дорогах і крутих спусках, де зустрічний роз'їзд утруднено, дати дорогу повинен:",
@@ -25,8 +24,7 @@
       ],
       "correct_answer": "Водій транспортного засобу, що рухається на спуск.",
       "correct_index": 0,
-      "image": null,
-      "explanation": "Розділ 28, пункт 28.1:\n<p><strong>28.1</strong> Вимоги цього розділу стосуються ділянок доріг, що позначені знаками 1.6<a href=\"/assets/images/pdr/road-signs/original/RSS_1_6.png\" class=\"fancybox\"><img src=\"/assets/images/pdr/road-signs/small/RSS_1_6.png\" alt=\"\"></a> та 1.7<a href=\"/assets/images/pdr/road-signs/original/RSS_1_7.png\" class=\"fancybox\"><img src=\"/assets/images/pdr/road-signs/small/RSS_1_7.png\" alt=\"\"></a>.</p>\n<p>На гірських дорогах і крутих спусках, де зустрічний роз’їзд утруднено, водій транспортного засобу, що рухається на спуск, повинен дати дорогу транспортним засобам, що рухаються вгору.</p>"
+      "image": null
     },
     {
       "question": "На гірських дорогах і крутих спусках, де зустрічний роз'їзд утруднено, перевагу в русі має:",
@@ -37,8 +35,7 @@
       ],
       "correct_answer": "Водій транспортного засобу, що рухається на підйом.",
       "correct_index": 1,
-      "image": null,
-      "explanation": "Розділ 28, пункт 28.1:\n<p><strong>28.1</strong> Вимоги цього розділу стосуються ділянок доріг, що позначені знаками 1.6<a href=\"/assets/images/pdr/road-signs/original/RSS_1_6.png\" class=\"fancybox\"><img src=\"/assets/images/pdr/road-signs/small/RSS_1_6.png\" alt=\"\"></a> та 1.7<a href=\"/assets/images/pdr/road-signs/original/RSS_1_7.png\" class=\"fancybox\"><img src=\"/assets/images/pdr/road-signs/small/RSS_1_7.png\" alt=\"\"></a>.</p>\n<p>На гірських дорогах і крутих спусках, де зустрічний роз’їзд утруднено, водій транспортного засобу, що рухається на спуск, повинен дати дорогу транспортним засобам, що рухаються вгору.</p>"
+      "image": null
     },
     {
       "question": "Під час руху на спуск на вашій смузі руху виникла перешкода роз'їдетеся із зустрічним транспортним засобом?",
@@ -48,8 +45,7 @@
       ],
       "correct_answer": "Поступитеся йому дорогою.",
       "correct_index": 0,
-      "image": null,
-      "explanation": "Розділ 28, пункт 28.1:\n<p><strong>28.1</strong> Вимоги цього розділу стосуються ділянок доріг, що позначені знаками 1.6<a href=\"/assets/images/pdr/road-signs/original/RSS_1_6.png\" class=\"fancybox\"><img src=\"/assets/images/pdr/road-signs/small/RSS_1_6.png\" alt=\"\"></a> та 1.7<a href=\"/assets/images/pdr/road-signs/original/RSS_1_7.png\" class=\"fancybox\"><img src=\"/assets/images/pdr/road-signs/small/RSS_1_7.png\" alt=\"\"></a>.</p>\n<p>На гірських дорогах і крутих спусках, де зустрічний роз’їзд утруднено, водій транспортного засобу, що рухається на спуск, повинен дати дорогу транспортним засобам, що рухаються вгору.</p>"
+      "image": null
     },
     {
       "question": "Що з перерахованого забороняється на гірських дорогах?",
@@ -60,8 +56,7 @@
       ],
       "correct_answer": "Заборонені обидві дії, зазначені у відповідях 1 і 2.",
       "correct_index": 2,
-      "image": null,
-      "explanation": "Розділ 28, пункт 28.3:\n<p><strong>28.3</strong> На гірських дорогах заборонено:</p>\n<p><strong>а)</strong> рухатися з непрацюючим двигуном та вимкненими зчепленням або передачею;</p>\n<p><strong>б)</strong> буксирування на гнучкому зчепленні;</p>\n<p><strong>в)</strong> будь-яке буксирування під час ожеледиці.</p>"
+      "image": null
     },
     {
       "question": "Під час руху по гірських дорогах водій транспортного засобу повинен:",
@@ -72,8 +67,7 @@
       ],
       "correct_answer": "Рухатися з працюючим двигуном, ввімкненими зчепленням і передачею.",
       "correct_index": 0,
-      "image": null,
-      "explanation": "Розділ 28, пункт 28.3:\n<p><strong>28.3</strong> На гірських дорогах заборонено:</p>\n<p><strong>а)</strong> рухатися з непрацюючим двигуном та вимкненими зчепленням або передачею;</p>\n<p><strong>б)</strong> буксирування на гнучкому зчепленні;</p>\n<p><strong>в)</strong> будь-яке буксирування під час ожеледиці.</p>"
+      "image": null
     },
     {
       "question": "Яким способом/способами дозволено буксирування автомобілів на гірських дорогах?",
@@ -85,8 +79,7 @@
       ],
       "correct_answer": "На жорсткому зчепленні або способом часткового навантаження.",
       "correct_index": 3,
-      "image": null,
-      "explanation": "Розділ 28, пункт 28.3:\n<p><strong>28.3</strong> На гірських дорогах заборонено:</p>\n<p><strong>а)</strong> рухатися з непрацюючим двигуном та вимкненими зчепленням або передачею;</p>\n<p><strong>б)</strong> буксирування на гнучкому зчепленні;</p>\n<p><strong>в)</strong> будь-яке буксирування під час ожеледиці.</p>"
+      "image": null
     },
     {
       "question": "Чи дозволене буксирування на гірських дорогах під час ожеледиці?",
@@ -97,8 +90,7 @@
       ],
       "correct_answer": "Заборонено.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     }
   ]
 }

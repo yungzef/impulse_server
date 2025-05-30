@@ -11,8 +11,7 @@
       ],
       "correct_answer": "Встановити важіль перемикання передач в нейтральне положення, першу передачу включити тільки при включенні жовтого сигналу світлофора.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Безпечною дистанцією під час руху сухою дорогою на легковому автомобілі можна вважати відстань, яку автомобіль пройде не менше ніж за:",
@@ -23,8 +22,7 @@
       ],
       "correct_answer": "2 секунди.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Зменшення гальмового шляху транспортного засобу досягається:",
@@ -34,8 +32,7 @@
       ],
       "correct_answer": "Гальмуванням на межі блокування способом переривчастого натискання на педаль гальма.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Під час руху в умовах поганої видимості потрібно вибирати швидкість, виходячи з того, що зупинний шлях має бути:",
@@ -45,8 +42,7 @@
       ],
       "correct_answer": "Менше відстані видимості.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Що мається на увазі під часом реакції водія?",
@@ -57,8 +53,7 @@
       ],
       "correct_answer": "Час з моменту виявлення водієм небезпеки чи перешкоди для руху до початку вжиття ним заходів задля запобігання контакту з ними.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "У яких випадках слід збільшити боковий інтервал?",
@@ -70,8 +65,7 @@
       ],
       "correct_answer": "У всіх наведених випадках.",
       "correct_index": 3,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Рухатися по глибокому снігу на ґрунтовій дорозі слід:",
@@ -81,8 +75,7 @@
       ],
       "correct_answer": "На заздалегідь обраній зниженій передачі, без різких поворотів і зупинок.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Чи виключає антиблокувальна гальмівна система можливість виникнення занесення або знесення під час проходження повороту?",
@@ -93,8 +86,7 @@
       ],
       "correct_answer": "Не виключає можливість виникнення знесення або занесення.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Рухаючись прямо зі швидкістю 50 км/год., ви раптово потрапили на невелику слизьку ділянку дороги. Що слід зробити?",
@@ -104,8 +96,7 @@
       ],
       "correct_answer": "Не змінювати траєкторії та швидкості руху.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Увімкнення яких зовнішніх світлових приладів забезпечить вам найкращу видимість дороги під час руху вночі за сильної хуртовини?",
@@ -115,8 +106,7 @@
       ],
       "correct_answer": "Протитуманних фар спільно з ближнім світлом фар.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "У якому з перелічених випадків водієві слід оцінювати обстановку позаду?",
@@ -127,8 +117,7 @@
       ],
       "correct_answer": "У випадку будь-якого гальмування.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Де повинна бути розташована ступня лівої ноги водія при керуванні автомобілем з механічною коробкою передач (з увімкненим зчепленням)?",
@@ -139,8 +128,7 @@
       ],
       "correct_answer": "Зліва від педалі на підлозі або спеціальному майданчику.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Якщо Ви сідаєте за кермо автомобіля після іншого водія, яка повинна бути послідовність Ваших дій?",
@@ -151,8 +139,7 @@
       ],
       "correct_answer": "Відрегулювати положення сидіння, відрегулювати положення рульової колонки, відрегулювати положення дзеркал заднього виду, пристебнути пасок безпеки.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Де Ви знайдете дані про допустиму масу причепа, обладнаного гальмами, для Вашого легкового автомобіля?",
@@ -163,8 +150,7 @@
       ],
       "correct_answer": "В технічному паспорті.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "При проїзді через тунель ви наближаєтеся до кінця затору. Як Вам вести себе?",
@@ -176,8 +162,7 @@
       ],
       "correct_answer": "Включити аварійну світлову сигналізацію.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Ви хочете обігнати велосипедистів. Що Ви повинні врахувати при оцінці бокового інтервалу?",
@@ -189,8 +174,7 @@
       ],
       "correct_answer": "Відповіді 2 і 3.",
       "correct_index": 3,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Ви хочете перетнути головну дорогу. Видимість в обох напрямках сильно обмежена через припарковані транспортні засоби. Як Ви будете діяти?",
@@ -200,8 +184,7 @@
       ],
       "correct_answer": "З особливою обережністю виїду на перехрестя.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Безпечною дистанцією між легковими автомобілями, які рухаються зі швидкістю 50 км на годину на сухому асфальті, можна вважати:",
@@ -212,8 +195,7 @@
       ],
       "correct_answer": "Не менше 25 метрів або 2 секунди .",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Як сприймається водієм швидкість його автомобіля у випадку тривалого руху рівнинною дорогою з великою швидкістю?",
@@ -224,8 +206,7 @@
       ],
       "correct_answer": "Здається менше, ніж насправді.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Під час руху на якому автомобілі збільшення швидкості може сприяти усуненню занесення задньої осі?",
@@ -235,8 +216,7 @@
       ],
       "correct_answer": "На передньопривідному.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Що має зробити водій, щоб швидко відновити ефективність гальм після проїзду через водну перешкоду?",
@@ -247,8 +227,7 @@
       ],
       "correct_answer": "Продовжити рух і просушити гальмівні колодки багаторазовими нетривалими натисканнями на педаль гальма.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Під час гальмування двигуном на крутому спуску водій має вибирати передачу, виходячи з умов:",
@@ -259,8 +238,7 @@
       ],
       "correct_answer": "Чим крутіше спуск, тим нижче передача.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Як має діяти водій у разі втрати зчеплення коліс з дорогою через утворення «водяного клина»?",
@@ -271,8 +249,7 @@
       ],
       "correct_answer": "Знизити швидкість, застосовуючи гальмування двигуном.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Чим небезпечне тривале гальмування з вимкненим зчепленням (передачею) на крутому спуску?",
@@ -283,8 +260,7 @@
       ],
       "correct_answer": "Перегріваються гальмівні механізми і зменшується ефективність гальмування.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Під час руху в умовах туману відстань до предметів видається:",
@@ -295,8 +271,7 @@
       ],
       "correct_answer": "Більшою, ніж насправді.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Що мається на увазі під зупинним шляхом?",
@@ -307,8 +282,7 @@
       ],
       "correct_answer": "Відстань, пройдена транспортним засобом з моменту виявлення водієм небезпеки до повної зупинки.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Якими критеріями мають керуватися водії, обираючи швидкість у відповідності до видимості за напрямком руху?",
@@ -319,8 +293,7 @@
       ],
       "correct_answer": "Чим гірша видимість, тим меншою має бути швидкість руху.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "У якому випадку легковий автомобіль більш стійкий проти перекидання на повороті?",
@@ -331,8 +304,7 @@
       ],
       "correct_answer": "Без вантажу і пасажирів.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Що слід зробити водієві, щоб запобігти виникненню заносу під час проїзду крутого повороту?",
@@ -343,8 +315,7 @@
       ],
       "correct_answer": "Перед поворотом знизити швидкість, за необхідності ввімкнути знижену передачу, а під час проїзду повороту не збільшувати різко швидкість і не гальмувати.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "У який момент слід поступово відпускати стоянкове гальмо, починаючи рух на підйомі?",
@@ -355,8 +326,7 @@
       ],
       "correct_answer": "Одночасно з початком руху.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Під час руху якою ділянкою дороги дія сильного бокового вітру найбільш небезпечна?",
@@ -367,8 +337,7 @@
       ],
       "correct_answer": "Під час виїзду з закритої ділянки на відкриту.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Чи залежить вибір бокового інтервалу від швидкості руху?",
@@ -378,8 +347,7 @@
       ],
       "correct_answer": "Збільшуючи швидкість руху, бічний інтервал необхідно збільшити.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Як змінюється поле зору водія зі збільшенням швидкості руху?",
@@ -390,8 +358,7 @@
       ],
       "correct_answer": "Звужується.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Який стиль водіння забезпечить найменшу витрату палива?",
@@ -402,8 +369,7 @@
       ],
       "correct_answer": "Плавне прискорення при плавному уповільненні.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Як змінюється довжина гальмівного шляху легкового автомобіля під час руху з причепом, не оснащеним гальмівною системою?",
@@ -414,8 +380,7 @@
       ],
       "correct_answer": "Збільшується.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Як слід вчинити водієві, якщо під час руху сухою дорогою з асфальтобетонним покриттям почав накрапати дощ?",
@@ -426,8 +391,7 @@
       ],
       "correct_answer": "Зменшити швидкість і бути особливо обережним.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Для припинення занесення, викликаного гальмуванням, водій у першу чергу має:",
@@ -438,8 +402,7 @@
       ],
       "correct_answer": "Припинити розпочате гальмування.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "У темну пору доби та в похмуру погоду швидкість зустрічного автомобіля видається:",
@@ -450,8 +413,7 @@
       ],
       "correct_answer": "Нижчою, ніж насправді.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Гальмовим шляхом вважається:",
@@ -461,8 +423,7 @@
       ],
       "correct_answer": "Відстань, що проходить транспортний засіб під час екстреного гальмування з початку впливу на органи керування гальмовою системою до повної зупинки.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Різке гальмування під час ожеледиці може підвищити ризик потрапляння у ДТП?",
@@ -472,8 +433,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_40.jpeg",
-      "explanation": null
+      "image": "output_images/37_40.jpeg"
     },
     {
       "question": "Чи потрібно зчистити сніг із даху авто перед початком руху взимку?",
@@ -483,8 +443,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_41.jpeg",
-      "explanation": null
+      "image": "output_images/37_41.jpeg"
     },
     {
       "question": "Якщо виникла нагальна необхідність здійснити поїздку під час снігопаду, що рекомендовано мати з собою водієві?",
@@ -497,8 +456,7 @@
       ],
       "correct_answer": "Все перераховане вище.",
       "correct_index": 4,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Водіння вночі вимагає від водія більшої зосередженості та концентрації уваги, ніж водіння в денний час?",
@@ -508,8 +466,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Для водіїв із досвідом водіння понад 2 роки максимально допустима доза алкоголю у крові становить 0,3 проміле?",
@@ -519,8 +476,7 @@
       ],
       "correct_answer": "Ні.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Чи безпечно рухатись водієві автомобіля в даному випадку?",
@@ -530,8 +486,7 @@
       ],
       "correct_answer": "Ні.",
       "correct_index": 1,
-      "image": "output_images/37_45.jpeg",
-      "explanation": null
+      "image": "output_images/37_45.jpeg"
     },
     {
       "question": "Водіння вночі є безпечнішим, ніж водіння в денний час, оскільки на дорозі відносно невелика кількість автомобілів?",
@@ -541,8 +496,7 @@
       ],
       "correct_answer": "Ні.",
       "correct_index": 1,
-      "image": "output_images/37_46.jpeg",
-      "explanation": null
+      "image": "output_images/37_46.jpeg"
     },
     {
       "question": "Дистанція до зустрічного автомобіля в тумані завжди здається більшою, а швидкість меншою, ніж насправді:",
@@ -552,8 +506,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_47.jpeg",
-      "explanation": null
+      "image": "output_images/37_47.jpeg"
     },
     {
       "question": "Перед тим, як вирушати у поїздку вночі, особливу увагу слід приділити:",
@@ -564,8 +517,7 @@
       ],
       "correct_answer": "Освітлювальним приладам.",
       "correct_index": 0,
-      "image": "output_images/37_48.jpeg",
-      "explanation": null
+      "image": "output_images/37_48.jpeg"
     },
     {
       "question": "Для того щоб розпочати рух взимку достатньо очистити лобове скло автомобіля:",
@@ -575,8 +527,7 @@
       ],
       "correct_answer": "Ні.",
       "correct_index": 1,
-      "image": "output_images/37_49.jpeg",
-      "explanation": null
+      "image": "output_images/37_49.jpeg"
     },
     {
       "question": "Під час руху взимку всі рухи водія мають бути якомога плавнішими:",
@@ -586,8 +537,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Ви можете подавати звукові сигнали в населеному пункті будь-коли, якщо вважаєте це необхідним:",
@@ -597,8 +547,7 @@
       ],
       "correct_answer": "Ні.",
       "correct_index": 1,
-      "image": "output_images/37_51.jpeg",
-      "explanation": null
+      "image": "output_images/37_51.jpeg"
     },
     {
       "question": "Ви повинні закінчити подавання сигналу світловим покажчиком повороту безпосередньо під час виконання маневру повороту?",
@@ -608,8 +557,7 @@
       ],
       "correct_answer": "Ні.",
       "correct_index": 1,
-      "image": "output_images/37_52.jpeg",
-      "explanation": null
+      "image": "output_images/37_52.jpeg"
     },
     {
       "question": "Чому небезпечно залишати дах автомобіля не очищеним від снігу взимку?",
@@ -620,8 +568,7 @@
       ],
       "correct_answer": "Усе вищенаведене.",
       "correct_index": 2,
-      "image": "output_images/37_53.jpeg",
-      "explanation": null
+      "image": "output_images/37_53.jpeg"
     },
     {
       "question": "Чим вищою є швидкість руху, тим більшою повинна бути дистанція до транспортного засобу, що рухається попереду?",
@@ -631,8 +578,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Чи погоджуєтесь Ви з тим, що при збільшенні швидкості у два рази, гальмовий шлях збільшується приблизно у чотири рази:",
@@ -642,8 +588,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "З метою безпечного керування транспортним засобом водій повинен прогнозувати зміни дорожньої обстановки:",
@@ -653,8 +598,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Дозволений рівень алкоголю в крові водія в Україні не повинен перевищувати:",
@@ -665,8 +609,7 @@
       ],
       "correct_answer": "0, 2 проміле.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Водії із досвідом водіння понад 10 років можуть під час руху користуватись телефоном, тримаючи його в руці:",
@@ -676,8 +619,7 @@
       ],
       "correct_answer": "Ні.",
       "correct_index": 1,
-      "image": "output_images/37_58.jpeg",
-      "explanation": null
+      "image": "output_images/37_58.jpeg"
     },
     {
       "question": "Як Ви повинні вчинити, якщо зіштовхнулися з агресивною манерою водіння водіїв, що рухаються попереду?",
@@ -689,8 +631,7 @@
       ],
       "correct_answer": "Усе вищеперераховане.",
       "correct_index": 3,
-      "image": "output_images/37_59.jpeg",
-      "explanation": null
+      "image": "output_images/37_59.jpeg"
     },
     {
       "question": "Цей автомобіль здійснює рух заднім ходом?",
@@ -700,8 +641,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_60.jpeg",
-      "explanation": null
+      "image": "output_images/37_60.jpeg"
     },
     {
       "question": "На дорозі раптово з'явилася дика тварина, Ваші дії:",
@@ -711,8 +651,7 @@
       ],
       "correct_answer": "Гальмувати та бути готовим до повної зупинки.",
       "correct_index": 0,
-      "image": "output_images/37_61.jpeg",
-      "explanation": null
+      "image": "output_images/37_61.jpeg"
     },
     {
       "question": "Якщо через сильну зливу в межах населеного пункту, Ви не можете продовжувати рух, необхідно:",
@@ -722,8 +661,7 @@
       ],
       "correct_answer": "Зупинитись біля краю проїзної частини та увімкнути аварійну світлову сигналізацію.",
       "correct_index": 0,
-      "image": "output_images/37_62.jpeg",
-      "explanation": null
+      "image": "output_images/37_62.jpeg"
     },
     {
       "question": "Чи можна різко збільшувати швидкість під час руху в дощову погоду?",
@@ -733,8 +671,7 @@
       ],
       "correct_answer": "Ні.",
       "correct_index": 1,
-      "image": "output_images/37_63.jpeg",
-      "explanation": null
+      "image": "output_images/37_63.jpeg"
     },
     {
       "question": "Чи потрібно зменшити швидкість до та після проїзду цього дорожнього знаку?",
@@ -745,8 +682,7 @@
       ],
       "correct_answer": "В обох випадках.",
       "correct_index": 2,
-      "image": "output_images/37_64.jpeg",
-      "explanation": null
+      "image": "output_images/37_64.jpeg"
     },
     {
       "question": "Ви наближаєтесь до перехрестя, Ваші дії:",
@@ -757,8 +693,7 @@
       ],
       "correct_answer": "Бути готовим до вищеперерахованого.",
       "correct_index": 2,
-      "image": "output_images/37_65.jpeg",
-      "explanation": null
+      "image": "output_images/37_65.jpeg"
     },
     {
       "question": "Ви вирушили в доволі далеку поїздку. Через деякий час ви починаєте відчувати втому. Що Вам слід зробити?",
@@ -768,8 +703,7 @@
       ],
       "correct_answer": "З’їхати з дороги, зупинитися та відпочити, поки не перестанете відчувати втому.",
       "correct_index": 0,
-      "image": "output_images/37_66.jpeg",
-      "explanation": null
+      "image": "output_images/37_66.jpeg"
     },
     {
       "question": "Якщо Ви відчуваєте сильну втому за кермом, Ви:",
@@ -780,8 +714,7 @@
       ],
       "correct_answer": "Зупинитесь, відпочините та по можливості поміняєте водія.",
       "correct_index": 0,
-      "image": "output_images/37_67.jpeg",
-      "explanation": null
+      "image": "output_images/37_67.jpeg"
     },
     {
       "question": "Який найкращий спосіб уникнути наїзду на інші транспортні засоби, людей чи тварин під час виїзду на проїзну частину з узбіччя?",
@@ -791,8 +724,7 @@
       ],
       "correct_answer": "Подивитися у свої дзеркала та зробити поворот голови через плече, перш ніж виїжджати з узбіччя.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Якщо ви нещодавно отримали право на керування транспортним засобом і поїздки за кермом вночі викликають у Вас страх або невпевненість, найкраще:",
@@ -803,8 +735,7 @@
       ],
       "correct_answer": "Проїхати незнайомі вулиці спочатку вдень, а потім їздити такими вулицями вночі.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Під час тривалих поїздок найкращий спосіб запобігти сонливості це:",
@@ -815,8 +746,7 @@
       ],
       "correct_answer": "Регулярні зупинки для відпочинку та вживання питної води (за наявності).",
       "correct_index": 2,
-      "image": "output_images/37_70.jpeg",
-      "explanation": null
+      "image": "output_images/37_70.jpeg"
     },
     {
       "question": "Ремені безпеки є найефективнішим засобом попередження травмування для водія та пасажирів:",
@@ -826,8 +756,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_71.jpeg",
-      "explanation": null
+      "image": "output_images/37_71.jpeg"
     },
     {
       "question": "У якому випадку подання звукового сигналу під час руху в населеному пункті є доречним:",
@@ -838,8 +767,7 @@
       ],
       "correct_answer": "Ви бачите дитину, яка збирається вибігти на проїзну частину.",
       "correct_index": 2,
-      "image": "output_images/37_72.jpeg",
-      "explanation": null
+      "image": "output_images/37_72.jpeg"
     },
     {
       "question": "Якщо назустріч вам наближається транспортний засіб з увімкненим дальнім світлом фар, Ви повинні:",
@@ -850,8 +778,7 @@
       ],
       "correct_answer": "Відвести погляд на праву сторону дороги.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Правильне налаштування підголівників може значно зменшити ризик травмування:",
@@ -861,8 +788,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_74.jpeg",
-      "explanation": null
+      "image": "output_images/37_74.jpeg"
     },
     {
       "question": "Що означають білі або прозорі вогні в задній частині автомобіля:",
@@ -873,8 +799,7 @@
       ],
       "correct_answer": "Транспортний засіб рухається заднім ходом.",
       "correct_index": 0,
-      "image": "output_images/37_75.jpeg",
-      "explanation": null
+      "image": "output_images/37_75.jpeg"
     },
     {
       "question": "Недостатній тиск в шинах збільшує гальмівний шлях автомобіля:",
@@ -884,8 +809,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_76.jpeg",
-      "explanation": null
+      "image": "output_images/37_76.jpeg"
     },
     {
       "question": "Недостатній тиск в шинах сприяє економії пального:",
@@ -895,8 +819,7 @@
       ],
       "correct_answer": "Ні.",
       "correct_index": 1,
-      "image": "output_images/37_77.jpeg",
-      "explanation": null
+      "image": "output_images/37_77.jpeg"
     },
     {
       "question": "Найбільша небезпека великогабаритних транспортних засобів у тому, що вони:",
@@ -908,8 +831,7 @@
       ],
       "correct_answer": "Мають великі «сліпі зони».",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Коли інший автомобіль розпочав маневр перестроювання у вашу смугу зі смуги праворуч, Ваші дії:",
@@ -920,8 +842,7 @@
       ],
       "correct_answer": "Зменшити швидкість та дозволити йому здійснити маневр перестроювання.",
       "correct_index": 2,
-      "image": "output_images/37_79.jpeg",
-      "explanation": null
+      "image": "output_images/37_79.jpeg"
     },
     {
       "question": "Якщо водій білого автомобіля різко розпочав маневр перестроювання у вашу смугу зі смуги ліворуч, Ваші дії:",
@@ -932,8 +853,7 @@
       ],
       "correct_answer": "Зменшити швидкість та дозволити йому здійснити маневр перестроювання.",
       "correct_index": 2,
-      "image": "output_images/37_80.jpeg",
-      "explanation": null
+      "image": "output_images/37_80.jpeg"
     },
     {
       "question": "Який найкращий спосіб переконатися, що у вашій сліпій зоні немає транспортних засобів чи велосипедистів?",
@@ -944,8 +864,7 @@
       ],
       "correct_answer": "Все вищеперераховане.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Вашу голову та груди від удару об приладову панель або лобове скло під час зіткнення тримає:",
@@ -955,8 +874,7 @@
       ],
       "correct_answer": "Ремінь безпеки.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Перевірка Ваших «сліпих зон» особливо важлива:",
@@ -968,8 +886,7 @@
       ],
       "correct_answer": "У всіх перерахованих вище ситуаціях.",
       "correct_index": 3,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Пішоходи повинні утриматись від переходу проїзної частини, якщо наближається транспортний засіб з проблисковими маячками:",
@@ -979,8 +896,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_84.jpeg",
-      "explanation": null
+      "image": "output_images/37_84.jpeg"
     },
     {
       "question": "Що робити, якщо під час руху вночі зустрічний автомобіль рухається із увімкненим дальнім світлом фар та засліплює Вас?",
@@ -991,8 +907,7 @@
       ],
       "correct_answer": "Подивитися на правий край проїжджої частини.",
       "correct_index": 1,
-      "image": "output_images/37_85.jpeg",
-      "explanation": null
+      "image": "output_images/37_85.jpeg"
     },
     {
       "question": "Якщо на вашій смузі є зустрічний транспортний засіб чи дозволено подати звуковий сигнал в населеному пункті?",
@@ -1002,8 +917,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_86.jpeg",
-      "explanation": null
+      "image": "output_images/37_86.jpeg"
     },
     {
       "question": "Використання кондиціонера під час руху авто впливає на:",
@@ -1014,8 +928,7 @@
       ],
       "correct_answer": "На витрату палива.",
       "correct_index": 1,
-      "image": "output_images/37_87.jpeg",
-      "explanation": null
+      "image": "output_images/37_87.jpeg"
     },
     {
       "question": "Чи впливає використання кондиціонера під час руху авто на витрату палива?",
@@ -1025,8 +938,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_88.jpeg",
-      "explanation": null
+      "image": "output_images/37_88.jpeg"
     },
     {
       "question": "З метою належного прогнозування дорожньої обстановки і безпечного подальшого руху, Ви повинні більше розподілити увагу погляд на:",
@@ -1036,8 +948,7 @@
       ],
       "correct_answer": "Точці А.",
       "correct_index": 0,
-      "image": "output_images/37_89.jpeg",
-      "explanation": null
+      "image": "output_images/37_89.jpeg"
     },
     {
       "question": "Чи дозволено Вам здійснити обгін у даній дорожній ситуації?",
@@ -1047,8 +958,7 @@
       ],
       "correct_answer": "Заборонено.",
       "correct_index": 0,
-      "image": "output_images/37_90.jpeg",
-      "explanation": null
+      "image": "output_images/37_90.jpeg"
     },
     {
       "question": "Садити дитину в авто потрібно з боку:",
@@ -1059,8 +969,7 @@
       ],
       "correct_answer": "Тротуару.",
       "correct_index": 1,
-      "image": "output_images/37_91.jpeg",
-      "explanation": null
+      "image": "output_images/37_91.jpeg"
     },
     {
       "question": "Чи потрібно у даному випадку зменшити швидкість?",
@@ -1071,8 +980,7 @@
       ],
       "correct_answer": "Потрібно.",
       "correct_index": 0,
-      "image": "output_images/37_92.jpeg",
-      "explanation": null
+      "image": "output_images/37_92.jpeg"
     },
     {
       "question": "Чи правильно в даному випадку водій відрегулював положення сидіння та рульового колеса перед початком руху?",
@@ -1082,8 +990,7 @@
       ],
       "correct_answer": "Не правильно.",
       "correct_index": 1,
-      "image": "output_images/37_93.jpeg",
-      "explanation": null
+      "image": "output_images/37_93.jpeg"
     },
     {
       "question": "Чи комфортна та правильна посадка водія?",
@@ -1093,8 +1000,7 @@
       ],
       "correct_answer": "Ні.",
       "correct_index": 1,
-      "image": "output_images/37_94.jpeg",
-      "explanation": null
+      "image": "output_images/37_94.jpeg"
     },
     {
       "question": "Чи необхідно збільшити потужність склоочисника у разі випередження вантажного автомобіля під час невеликого дощу?",
@@ -1105,8 +1011,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_95.jpeg",
-      "explanation": null
+      "image": "output_images/37_95.jpeg"
     },
     {
       "question": "Зоною потенційної небезпеки для Вас, як водія даного транспортного засобу, є:",
@@ -1117,8 +1022,7 @@
       ],
       "correct_answer": "Зона C.",
       "correct_index": 2,
-      "image": "output_images/37_96.jpeg",
-      "explanation": null
+      "image": "output_images/37_96.jpeg"
     },
     {
       "question": "Ремінь безпеки є обов’язковим для вагітних?",
@@ -1128,8 +1032,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_97.jpeg",
-      "explanation": null
+      "image": "output_images/37_97.jpeg"
     },
     {
       "question": "Водій транспортного засобу, наближаючись до пішоходів, які перетинають автомобільну дорогу за межами наземного пішохідного переходу, повинен:",
@@ -1141,8 +1044,7 @@
       ],
       "correct_answer": "Негайно зменшити швидкість і бути готовим до повної зупинки.",
       "correct_index": 0,
-      "image": "output_images/37_98.jpeg",
-      "explanation": null
+      "image": "output_images/37_98.jpeg"
     },
     {
       "question": "У мокру погоду або в дощ гальмовий шлях транспортного засобу збільшується:",
@@ -1152,8 +1054,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_99.jpeg",
-      "explanation": null
+      "image": "output_images/37_99.jpeg"
     },
     {
       "question": "Водій вантажного автомобіля, не враховуючи дорожньої обстановки почав рух, Ви повинні:",
@@ -1164,8 +1065,7 @@
       ],
       "correct_answer": "Зменшити швидкість або зупинитися.",
       "correct_index": 2,
-      "image": "output_images/37_100.jpeg",
-      "explanation": null
+      "image": "output_images/37_100.jpeg"
     },
     {
       "question": "Чи потрібно в даному випадку зменшити швидкість або зупинитися, якщо Ви рухаєтесь прямо по головній дорозі:",
@@ -1175,8 +1075,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_101.jpeg",
-      "explanation": null
+      "image": "output_images/37_101.jpeg"
     },
     {
       "question": "Під час руху водію транспортного засобу дозволяється використовувати свій смартфон для використання навігації (GPS):",
@@ -1186,8 +1085,7 @@
       ],
       "correct_answer": "Закріпивши на приладовій панелі (за винятком водіїв оперативних транспортних засобів під час виконання ними невідкладного службового завдання).",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Водій транспортного засобу для здійснення посадки (висадки) пасажирів повинен:",
@@ -1198,8 +1096,7 @@
       ],
       "correct_answer": "Відповідь 1 і 2.",
       "correct_index": 2,
-      "image": "output_images/37_103.jpeg",
-      "explanation": null
+      "image": "output_images/37_103.jpeg"
     },
     {
       "question": "Чи правильно в даному випадку водій транспортного засобу закріпив ремінь безпеки?",
@@ -1209,8 +1106,7 @@
       ],
       "correct_answer": "Ні, ремінь закріплений не правильно.",
       "correct_index": 1,
-      "image": "output_images/37_104.jpeg",
-      "explanation": null
+      "image": "output_images/37_104.jpeg"
     },
     {
       "question": "У наведеній ситуації Ви, наближаючись до перехрестя, повинні:",
@@ -1221,8 +1117,7 @@
       ],
       "correct_answer": "Пригальмувати та дати можливість велосипедисту безпечно закінчити перетин перехрестя.",
       "correct_index": 2,
-      "image": "output_images/37_105.jpeg",
-      "explanation": null
+      "image": "output_images/37_105.jpeg"
     },
     {
       "question": "Чи може ремінь безпеки ефективно спрацювати захистити лежачого пасажира?",
@@ -1232,8 +1127,7 @@
       ],
       "correct_answer": "Ні.",
       "correct_index": 1,
-      "image": "output_images/37_106.jpeg",
-      "explanation": null
+      "image": "output_images/37_106.jpeg"
     },
     {
       "question": "Якщо під час тривалої подорожі виникла необхідність змінити водія, необхідно налаштувати, у тому числі:",
@@ -1244,8 +1138,7 @@
       ],
       "correct_answer": "Сидіння та дзеркала.",
       "correct_index": 0,
-      "image": "output_images/37_107.jpeg",
-      "explanation": null
+      "image": "output_images/37_107.jpeg"
     },
     {
       "question": "Як має діяти водій транспортного засобу у разі сонячного засліплення?",
@@ -1255,8 +1148,7 @@
       ],
       "correct_answer": "Ввімкнути аварійну сигналізацію і, не змінюючи смуги руху, зменшити швидкість і зупинитися.",
       "correct_index": 0,
-      "image": "output_images/37_108.jpeg",
-      "explanation": null
+      "image": "output_images/37_108.jpeg"
     },
     {
       "question": "У разі аварії цей водій буде захищений ременем безпеки?",
@@ -1266,8 +1158,7 @@
       ],
       "correct_answer": "Ні.",
       "correct_index": 1,
-      "image": "output_images/37_109.jpeg",
-      "explanation": null
+      "image": "output_images/37_109.jpeg"
     },
     {
       "question": "Чи буде тривала розмова пасажира з водієм заважати водієві керувати транспортним засобом?",
@@ -1277,8 +1168,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_110.jpeg",
-      "explanation": null
+      "image": "output_images/37_110.jpeg"
     },
     {
       "question": "Наближаючись до перехрестя, де світлофор працює в режимі миготіння жовтого сигналу водій легкового автомобіля повинен:",
@@ -1289,8 +1179,7 @@
       ],
       "correct_answer": "Знизити швидкість та бути готовим до повної зупинки.",
       "correct_index": 0,
-      "image": "output_images/37_111.jpeg",
-      "explanation": null
+      "image": "output_images/37_111.jpeg"
     },
     {
       "question": "Гальмівний шлях змінюється в залежності від:",
@@ -1301,8 +1190,7 @@
       ],
       "correct_answer": "Всі відповіді вірні.",
       "correct_index": 2,
-      "image": "output_images/37_112.jpeg",
-      "explanation": null
+      "image": "output_images/37_112.jpeg"
     },
     {
       "question": "Витрата палива залежить від:",
@@ -1314,8 +1202,7 @@
       ],
       "correct_answer": "Всі відповіді правильні.",
       "correct_index": 3,
-      "image": "output_images/37_113.jpeg",
-      "explanation": null
+      "image": "output_images/37_113.jpeg"
     },
     {
       "question": "Дотримання безпечної дистанції може допомогти запобігти зіткненню без здійснення будь-яких маневрів?",
@@ -1325,8 +1212,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Ви зупинились на вимогу поліцейського. Ви увімкнете аварійну світлову сигналізацію?",
@@ -1336,8 +1222,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_115.jpeg",
-      "explanation": null
+      "image": "output_images/37_115.jpeg"
     },
     {
       "question": "Водій, який має намір Вас обігнати, раніше перешкоджав Вам виконати обгін. У цьому випадку Ви:",
@@ -1347,8 +1232,7 @@
       ],
       "correct_answer": "Не будете перешкоджати обгону.",
       "correct_index": 1,
-      "image": "output_images/37_116.jpeg",
-      "explanation": null
+      "image": "output_images/37_116.jpeg"
     },
     {
       "question": "Особа, яка навчається водінню, повинна мати при собі медичну довідку встановленого зразка?",
@@ -1358,8 +1242,7 @@
       ],
       "correct_answer": "Ні.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Рухаючись у населеному пункті, Ви бачите як водій, що рухається попереду, створив аварійну ситуацію. Для того, щоб запобігти ДТП Ви можете подати звуковий сигнал:",
@@ -1369,8 +1252,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 1,
-      "image": "output_images/37_118.jpeg",
-      "explanation": null
+      "image": "output_images/37_118.jpeg"
     },
     {
       "question": "Сідаючи в автомобіль, Ви раптом відчули запаморочення та сильну втому. Дорога до місця призначення займе не більше 10 хв. Ви:",
@@ -1380,8 +1262,7 @@
       ],
       "correct_answer": "Не розпочнете рух.",
       "correct_index": 1,
-      "image": "output_images/37_119.jpeg",
-      "explanation": null
+      "image": "output_images/37_119.jpeg"
     },
     {
       "question": "Після приймання заспокійливого лікарського засобу, Ви відчули запаморочення та зниження уваги. У такому випадку дозволено керувати транспортним засобом за умови:",
@@ -1392,8 +1273,7 @@
       ],
       "correct_answer": "Керувати транспортним засобом заборонено.",
       "correct_index": 2,
-      "image": "output_images/37_120.jpeg",
-      "explanation": null
+      "image": "output_images/37_120.jpeg"
     },
     {
       "question": "Особа, яка не досягла 18-річного віку може отримати право на керування транспортним засобом категорії В за умови:",
@@ -1404,8 +1284,7 @@
       ],
       "correct_answer": "В жодному випадку.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "З якого з цих транспортних засобів пасажир може вийти до моменту повної зупинки?",
@@ -1417,8 +1296,7 @@
       ],
       "correct_answer": "Жодного з них.",
       "correct_index": 3,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Проїжджаючи повз школу, що в першу чергу необхідно зробити?",
@@ -1430,8 +1308,7 @@
       ],
       "correct_answer": "Зменшити швидкість.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Вживання навіть невеликої дози алкоголю:",
@@ -1442,8 +1319,7 @@
       ],
       "correct_answer": "Впливає на час реакції водія.",
       "correct_index": 2,
-      "image": "output_images/37_124.jpeg",
-      "explanation": null
+      "image": "output_images/37_124.jpeg"
     },
     {
       "question": "Аварії, вчинені водіями у стані алкогольного сп’яніння, як правило мають:",
@@ -1453,8 +1329,7 @@
       ],
       "correct_answer": "Більш важкі наслідки.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Щоб керувати транспортним засобом безпечно, потрібно зосередитися і вміти стежити за всім, що відбувається на дорозі. Для цього вам потрібно:",
@@ -1465,8 +1340,7 @@
       ],
       "correct_answer": "Постійно оцінювати дорожню обстановку контролювати безпечну дистанцію та інтервал.",
       "correct_index": 2,
-      "image": "output_images/37_126.jpeg",
-      "explanation": null
+      "image": "output_images/37_126.jpeg"
     },
     {
       "question": "При під’їзді до крутого повороту Ви помітили сліди гравію на дорозі. Вам слід:",
@@ -1477,8 +1351,7 @@
       ],
       "correct_answer": "Зменшити швидкість.",
       "correct_index": 2,
-      "image": "output_images/37_127.jpeg",
-      "explanation": null
+      "image": "output_images/37_127.jpeg"
     },
     {
       "question": "Якщо Ви помітили вершника на дорозі, Вам слід:",
@@ -1489,8 +1362,7 @@
       ],
       "correct_answer": "Зменшити швидкість та збільшити безпечний інтервал до вершника.",
       "correct_index": 1,
-      "image": "output_images/37_128.jpeg",
-      "explanation": null
+      "image": "output_images/37_128.jpeg"
     },
     {
       "question": "Друг позичає вам транспортний засіб, який вміщує десять осіб разом з водієм. Чи достатньо Вам посвідчення на право керування транспортним засобом категорії B, щоб керувати таким транспортним засобом?",
@@ -1500,8 +1372,7 @@
       ],
       "correct_answer": "Недостатньо.",
       "correct_index": 1,
-      "image": "output_images/37_129.jpeg",
-      "explanation": null
+      "image": "output_images/37_129.jpeg"
     },
     {
       "question": "Рухаючись у заторі Ви сповільнюєте рух, наближаючись до велосипедиста. Водії позаду сигналять, вимагаючи від Вас рухатись швидше та обігнати велосипедиста. Ваші дії:",
@@ -1512,8 +1383,7 @@
       ],
       "correct_answer": "Зберігаєте спокій і виконаєте обгін велосипедиста тоді, коли це буде безпечно.",
       "correct_index": 2,
-      "image": "output_images/37_130.jpeg",
-      "explanation": null
+      "image": "output_images/37_130.jpeg"
     },
     {
       "question": "Відкриваючи двері транспортного засобу зі сторони проїжджої частини, на що слід звернути увагу?",
@@ -1524,8 +1394,7 @@
       ],
       "correct_answer": "Відкривати двері лише, коли впевнились в тому, що це не загрожує іншим учасникам дорожнього руху.",
       "correct_index": 2,
-      "image": "output_images/37_131.jpeg",
-      "explanation": null
+      "image": "output_images/37_131.jpeg"
     },
     {
       "question": "Проїжджаючи поруч з дітьми, які граються біля краю дороги, Вам слід:",
@@ -1536,8 +1405,7 @@
       ],
       "correct_answer": "Зменшити швидкість і бути готовим повністю зупинити транспортний засіб.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Коли Ви бачите дітей на дорозі або поруч з нею:",
@@ -1548,8 +1416,7 @@
       ],
       "correct_answer": "Потрібно бути обережним, зменшити швидкість і бути готовим повністю зупинити транспортний засіб.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Рухаючись ділянками, де велика кількість пішоходів, водію необхідно:",
@@ -1560,8 +1427,7 @@
       ],
       "correct_answer": "Бути особливо уважним та обережним, зменшити швидкість і бути готовим до повної зупинки.",
       "correct_index": 1,
-      "image": "output_images/37_134.jpeg",
-      "explanation": null
+      "image": "output_images/37_134.jpeg"
     },
     {
       "question": "Коли Ви бачите людей похилого віку на дорозі або біля неї, Вам необхідно:",
@@ -1572,8 +1438,7 @@
       ],
       "correct_answer": "Потрібно бути обережним, зменшити швидкість і бути готовим повністю зупинити транспортний засіб.",
       "correct_index": 2,
-      "image": "output_images/37_135.jpeg",
-      "explanation": null
+      "image": "output_images/37_135.jpeg"
     },
     {
       "question": "Якщо Ви помітили пішохода з ознаками алкогольного сп’яніння, який рухається по краю проїзної частини, необхідно:",
@@ -1584,8 +1449,7 @@
       ],
       "correct_answer": "Бути максимально уважним та обережним, зменшити швидкість та бути готовим зупинити транспортний засіб.",
       "correct_index": 0,
-      "image": "output_images/37_136.jpeg",
-      "explanation": null
+      "image": "output_images/37_136.jpeg"
     },
     {
       "question": "Наближаючись до пішохідного переходу, на якому немає пішоходів, Ви:",
@@ -1596,8 +1460,7 @@
       ],
       "correct_answer": "Будете обережним і готовим зменшити швидкість, а у разі необхідності зупинити транспортний засіб.",
       "correct_index": 0,
-      "image": "output_images/37_137.jpeg",
-      "explanation": null
+      "image": "output_images/37_137.jpeg"
     },
     {
       "question": "Проїжджаючи повз припарковані транспортні засоби необхідно:",
@@ -1608,8 +1471,7 @@
       ],
       "correct_answer": "Бути максимально обережним, бо можлива раптова поява людей чи тварин з- за автомобілів, а також відкриття дверей.",
       "correct_index": 0,
-      "image": "output_images/37_138.jpeg",
-      "explanation": null
+      "image": "output_images/37_138.jpeg"
     },
     {
       "question": "Під час руху ви зіткнулись із агресивною манерою водіння транспортного засобу, що їде попереду. Ви повинні:",
@@ -1620,8 +1482,7 @@
       ],
       "correct_answer": "Зберігати спокій, за необхідності зменшити швидкість і уважно слідкувати за дорожньою обстановкою.",
       "correct_index": 2,
-      "image": "output_images/37_139.jpeg",
-      "explanation": null
+      "image": "output_images/37_139.jpeg"
     },
     {
       "question": "Під час руху вночі необхідно:",
@@ -1631,8 +1492,7 @@
       ],
       "correct_answer": "Рухатись на безпечній дистанції до транспортних засобів, що попереду, оскільки вночі складніше оцінювати дорожню обстановку.",
       "correct_index": 1,
-      "image": "output_images/37_140.jpeg",
-      "explanation": null
+      "image": "output_images/37_140.jpeg"
     },
     {
       "question": "Яке з наведених тверджень найбільш вдало описує Вас як безпечного водія?",
@@ -1643,8 +1503,7 @@
       ],
       "correct_answer": "Коли я керую транспортним засобом, я несу відповідальність за власну безпеку та безпеку інших учасників дорожнього руху.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Якщо під час сильного дощу видимість раптово погіршується, Вам слід:",
@@ -1655,8 +1514,7 @@
       ],
       "correct_answer": "Зменшити швидкість та збільшити відстань до транспортного засобу, що рухається попереду.",
       "correct_index": 0,
-      "image": "output_images/37_142.jpeg",
-      "explanation": null
+      "image": "output_images/37_142.jpeg"
     },
     {
       "question": "Що необхідно пам’ятати, якщо Ви плануєте тривалу поїздку:",
@@ -1667,8 +1525,7 @@
       ],
       "correct_answer": "Краще їхати протягом дня і робити багато перерв для відпочинку.",
       "correct_index": 2,
-      "image": "output_images/37_143.jpeg",
-      "explanation": null
+      "image": "output_images/37_143.jpeg"
     },
     {
       "question": "Ви хочете обігнати велосипедиста. Що Ви повинні врахувати при оцінці бокового інтервалу?",
@@ -1680,8 +1537,7 @@
       ],
       "correct_answer": "Відповіді 2 і 3.",
       "correct_index": 3,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Як сприймається водієм швидкість його автомобіля у випадку тривалого руху рівнинною дорогою з великою швидкістю?",
@@ -1692,8 +1548,7 @@
       ],
       "correct_answer": "Здається меншою, ніж насправді.",
       "correct_index": 0,
-      "image": "output_images/37_145.jpeg",
-      "explanation": null
+      "image": "output_images/37_145.jpeg"
     },
     {
       "question": "Який стиль водіння забезпечить найменшу витрату палива?",
@@ -1704,8 +1559,7 @@
       ],
       "correct_answer": "Плавне прискорення при плавному уповільненні.",
       "correct_index": 2,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "У темну пору доби та в похмуру погоду швидкість зустрічного автомобіля видається:",
@@ -1716,8 +1570,7 @@
       ],
       "correct_answer": "Нижчою, ніж насправді.",
       "correct_index": 0,
-      "image": "output_images/37_147.jpeg",
-      "explanation": null
+      "image": "output_images/37_147.jpeg"
     },
     {
       "question": "Відносно якої лінії дорожньої розмітки найбільш безпечно контролювати положення свого автомобіля при зустрічному роз’їзді в темний час доби?",
@@ -1728,8 +1581,7 @@
       ],
       "correct_answer": "Відносно лінії, що позначає правий край проїжджої частини дороги.",
       "correct_index": 1,
-      "image": "output_images/37_148.jpeg",
-      "explanation": null
+      "image": "output_images/37_148.jpeg"
     },
     {
       "question": "Гальмівний шлях на дорозі одразу після дощу:",
@@ -1740,8 +1592,7 @@
       ],
       "correct_answer": "Збільшується.",
       "correct_index": 0,
-      "image": "output_images/37_149.jpeg",
-      "explanation": null
+      "image": "output_images/37_149.jpeg"
     },
     {
       "question": "Під час руху в транспортному потоці водій, що рухався по сусідній смузі, різко перелаштувався на Вашу смугу руху, змусивши Вас загальмувати. Що необхідно Вам зробити в даній ситуації?",
@@ -1753,8 +1604,7 @@
       ],
       "correct_answer": "Неприпустима жодна з перерахованих дій.",
       "correct_index": 3,
-      "image": "output_images/37_150.jpeg",
-      "explanation": null
+      "image": "output_images/37_150.jpeg"
     },
     {
       "question": "Чим гірша видимість, тим меншою має бути швидкість руху:",
@@ -1764,8 +1614,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_151.jpeg",
-      "explanation": null
+      "image": "output_images/37_151.jpeg"
     },
     {
       "question": "Чим гірша видимість, тим більшою має бути швидкість руху:",
@@ -1775,8 +1624,7 @@
       ],
       "correct_answer": "Ні.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Чи дозволено водієві відчиняти двері транспортного засобу до його повної зупинки?",
@@ -1787,8 +1635,7 @@
       ],
       "correct_answer": "Заборонено.",
       "correct_index": 0,
-      "image": "output_images/37_153.jpeg",
-      "explanation": null
+      "image": "output_images/37_153.jpeg"
     },
     {
       "question": "Чи дозволено пасажирам відчиняти двері транспортного засобу до його зупинки?",
@@ -1799,8 +1646,7 @@
       ],
       "correct_answer": "Заборонено.",
       "correct_index": 0,
-      "image": "output_images/37_154.jpeg",
-      "explanation": null
+      "image": "output_images/37_154.jpeg"
     },
     {
       "question": "Як ви повинні вчинити в ситуації, наближаючись до автобуса, який виконує посадку або висадку організованих груп дітей?",
@@ -1812,8 +1658,7 @@
       ],
       "correct_answer": "Знизити швидкість, а в разі потреби зупинитися, бути максимально обережним.",
       "correct_index": 1,
-      "image": "output_images/37_155.jpeg",
-      "explanation": null
+      "image": "output_images/37_155.jpeg"
     },
     {
       "question": "У даній ситуації найбільшу увагу слід зосередити на зоні:",
@@ -1823,8 +1668,7 @@
       ],
       "correct_answer": "Зоні В.",
       "correct_index": 1,
-      "image": "output_images/37_156.jpeg",
-      "explanation": null
+      "image": "output_images/37_156.jpeg"
     },
     {
       "question": "Найбільша небезпека у даному випадку зосереджена у:",
@@ -1836,8 +1680,7 @@
       ],
       "correct_answer": "Зоні С.",
       "correct_index": 2,
-      "image": "output_images/37_157.jpeg",
-      "explanation": null
+      "image": "output_images/37_157.jpeg"
     },
     {
       "question": "У цьому випадку за появи зустрічного автомобіля водій білого повинен:",
@@ -1847,8 +1690,7 @@
       ],
       "correct_answer": "Переключитись на ближнє світло фар.",
       "correct_index": 0,
-      "image": "output_images/37_158.jpeg",
-      "explanation": null
+      "image": "output_images/37_158.jpeg"
     },
     {
       "question": "Чому швидкість водіїв-початківців має бути нижчою, ніж в інших водіїв?",
@@ -1859,8 +1701,7 @@
       ],
       "correct_answer": "Відповіді 1 та 2.",
       "correct_index": 2,
-      "image": "output_images/37_159.jpeg",
-      "explanation": null
+      "image": "output_images/37_159.jpeg"
     },
     {
       "question": "Дивлячись на зону С в даному випадку я повинен враховувати, що:",
@@ -1870,8 +1711,7 @@
       ],
       "correct_answer": "Пішохід у будь-який момент може розпочати рух.",
       "correct_index": 0,
-      "image": "output_images/37_160.jpeg",
-      "explanation": null
+      "image": "output_images/37_160.jpeg"
     },
     {
       "question": "Попереду Вас рухається велосипедист, який постійно різко пригальмовує. Ви:",
@@ -1881,8 +1721,7 @@
       ],
       "correct_answer": "Буду зберігати спокій, за необхідності зменшу швидкість, буду готовим зупинитись та продовжу уважно слідкувати за дорожньою обстановкою.",
       "correct_index": 1,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Відкриваючи двері транспортного засобу зі сторони проїжджої частини, на що слід звернути увагу?",
@@ -1893,8 +1732,7 @@
       ],
       "correct_answer": "Відкривати двері лише, коли впевнились в тому, що це не загрожує іншим учасникам дорожнього руху.",
       "correct_index": 2,
-      "image": "output_images/37_162.jpeg",
-      "explanation": null
+      "image": "output_images/37_162.jpeg"
     },
     {
       "question": "Чи обов'язково водієві, стаж водіння якого менше двох років, вішати відповідний розпізнавальний знак на автомобіль?",
@@ -1904,8 +1742,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_163.jpeg",
-      "explanation": null
+      "image": "output_images/37_163.jpeg"
     },
     {
       "question": "Якщо Ви рухаєтесь прямо на зелений сигнал світлофора, чи потрібно Вам зменшити швидкість у даному випадку?",
@@ -1915,8 +1752,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_164.jpeg",
-      "explanation": null
+      "image": "output_images/37_164.jpeg"
     },
     {
       "question": "Ви наближаєтесь до пішохідного переходу, на підходах до якого та безпосередньо на ньому немає пішоходів. Чи можете Ви проїхати, не зменшуючи швидкість?",
@@ -1926,8 +1762,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_165.jpeg",
-      "explanation": null
+      "image": "output_images/37_165.jpeg"
     },
     {
       "question": "Чи дозволено водієві сірого автомобіля виконати зупинку у цьому місці?",
@@ -1937,8 +1772,7 @@
       ],
       "correct_answer": "Заборонено.",
       "correct_index": 1,
-      "image": "output_images/37_166.jpeg",
-      "explanation": null
+      "image": "output_images/37_166.jpeg"
     },
     {
       "question": "Чи повинні Ви зупинитись у даному випадку, якщо водій зустрічного автомобіля, не переконавшись у безпечності маневру, виконує поворот ліворуч?",
@@ -1948,8 +1782,7 @@
       ],
       "correct_answer": "Повинні.",
       "correct_index": 0,
-      "image": "output_images/37_167.jpeg",
-      "explanation": null
+      "image": "output_images/37_167.jpeg"
     },
     {
       "question": "Чи потрібно збільшувати боковий інтервал, коли Ви наближаєтесь до вантажного автомобіля?",
@@ -1959,8 +1792,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": null,
-      "explanation": null
+      "image": null
     },
     {
       "question": "Чи повинні Ви під час руху прямо в даному випадку враховувати те, що велосипедист у будь-який момент може розпочати рух?",
@@ -1970,8 +1802,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_169.jpeg",
-      "explanation": null
+      "image": "output_images/37_169.jpeg"
     },
     {
       "question": "Чи потрібно зменшити швидкість, проїжджаючи повз пішохода у даному випадку?",
@@ -1981,8 +1812,7 @@
       ],
       "correct_answer": "Так.",
       "correct_index": 0,
-      "image": "output_images/37_170.jpeg",
-      "explanation": null
+      "image": "output_images/37_170.jpeg"
     },
     {
       "question": "Які фактори можуть призвести до засліплення водія?",
@@ -1994,8 +1824,7 @@
       ],
       "correct_answer": "Світло.",
       "correct_index": 3,
-      "image": null,
-      "explanation": null
+      "image": null
     }
   ]
 }
