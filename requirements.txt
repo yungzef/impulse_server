@@ -1,8 +1,17 @@
 # 📁 project_root/requirements.txt
 
-fastapi
-uvicorn[standard]
-aiogram
+fastapi~=0.115.12
+uvicorn[standard]~=0.34.2
+aiogram~=3.20.0.post0
 aiosqlite
-python-dotenv
+python-dotenv~=1.1.0
 flask
+requests~=2.32.3
+pydantic~=2.11.4
+typing~=3.7.4.3
+starlette~=0.46.2
+user-agents~=2.2.0
+pytz~=2025.2
+rich~=14.0.0
+ip2geotools~=0.1.6
+pillow~=11.2.1

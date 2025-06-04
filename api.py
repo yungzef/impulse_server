@@ -35,10 +35,10 @@ load_dotenv()
 # Configuration
 class Config:
     GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
-    GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
-    GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
-    GOOGLE_REDIRECT_URI = os.getenv("GOOGLE_REDIRECT_URI", "https://api.impulsepdr.online/auth/google/callback")
-    FRONTEND_URI = os.getenv("FRONTEND_URI", "https://impulsepdr.online")
+    GOOGLE_CLIENT_ID = "147419489204-mcv45kv1ndceffp1efnn2925cfet1ocb.apps.googleusercontent.com"
+    GOOGLE_CLIENT_SECRET = "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"
+    GOOGLE_REDIRECT_URI = "http://localhost:8000/auth/google/callback"
+    FRONTEND_URI = "http://localhost:3000"
     DATA_DIR = "data"
     THEMES_DIR = os.path.join(DATA_DIR, "themes")
     IMAGES_DIR = os.path.join(DATA_DIR, "output_images")
@@ -51,7 +51,7 @@ class Config:
 
 
 AMOUNT_TO_DAYS = {
-    49_00: 7,  # 29 грн
+    3: 7,  # 29 грн
     99_00: 30,  # 99 грн
     199_00: 90  # 199 грн
 }
@@ -121,7 +121,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS user_credits (
             user_id TEXT PRIMARY KEY,
             credits_used INTEGER DEFAULT 0,
-            daily_limit INTEGER DEFAULT 3,
+            daily_limit INTEGER DEFAULT 20,
             last_reset_date TEXT,
             FOREIGN KEY(user_id) REFERENCES users(user_id)
         )
@@ -532,7 +532,7 @@ async def _grant_premium(user_id: str, duration_days: int):
         cursor.execute('''
             INSERT OR REPLACE INTO user_credits 
             (user_id, daily_limit, credits_used, last_reset_date)
-            VALUES (?, 10, 0, ?)
+            VALUES (?, 200, 0, ?)
         ''', (user_id, today.date().isoformat()))
 
         conn.commit()
@@ -572,9 +572,9 @@ async def get_premium_status(
                     end_date=None,
                     days_remaining=None,
                     benefits={
-                        "ai_credits_per_day": 3,
+                        "ai_credits_per_day": 20,
                         "max_tests_per_day": 50,
-                        "description": "Базовый доступ (3 кредита ИИ в день, максимум 50 тестов)"
+                        "description": "Базовый доступ (20 кредита ИИ в день, максимум 50 тестов)"
                     }
                 )
 
@@ -600,7 +600,7 @@ async def get_premium_status(
                 (user_id,)
             )
             credit_info = cursor.fetchone()
-            daily_limit = credit_info["daily_limit"] if credit_info else 3
+            daily_limit = credit_info["daily_limit"] if credit_info else 20
 
             # Рассчитываем оставшиеся дни
             days_remaining = None
@@ -642,7 +642,7 @@ async def cancel_premium(
             # Возвращаем стандартный лимит кредитов (3 в день)
             cursor.execute('''
                 UPDATE user_credits 
-                SET daily_limit = 3
+                SET daily_limit = 20
                 WHERE user_id = ?
             ''', (user_id,))
 
@@ -1242,7 +1242,7 @@ async def google_callback(request: Request):
             "name": user_info.get("given_name") or user_info.get("name"),
         }
 
-        return RedirectResponse(f"{Config.FRONTEND_URI}?{urlencode(frontend_params)}")
+        return RedirectResponse(f"{Config.FRONTEND_URI}/auth/callback?{urlencode(frontend_params)}")
 
     except requests.exceptions.RequestException as e:
         error_msg = f"OAuth error: {str(e)}"
@@ -1652,14 +1652,48 @@ async def get_themes_preview(user_id: Optional[str] = None):
             })
     return sorted(themes, key=lambda x: x["index"])
 
+from fastapi import HTTPException, Query
+from datetime import datetime
+import os
+import json
+
 @app.get("/themes/{theme_id}", tags=["questions"])
 async def get_theme_by_id(
-        theme_id: int,
-        user_id: str = None,
-        offset: int = 0,
-        limit: int = 300
+    theme_id: int,
+    user_id: str = None,
+    offset: int = 0,
+    limit: int = 300
 ):
     """Get questions for a specific theme"""
+
+    # 🔒 Ограничение на доступ к темам > 15 без премиума
+    if theme_id > 15:
+        if not user_id:
+            raise HTTPException(status_code=403, detail="Потрібна преміум-підписка для доступу до цієї теми")
+
+        with db_connection() as conn:
+            cursor = conn.cursor()
+
+            cursor.execute(
+                "SELECT is_active, end_date FROM premium_subscriptions WHERE user_id = ?",
+                (user_id,)
+            )
+            subscription = cursor.fetchone()
+
+            is_premium = False
+
+            if subscription:
+                is_active = bool(subscription["is_active"])
+                end_date = subscription["end_date"]
+                if is_active and end_date:
+                    end_datetime = datetime.fromisoformat(end_date)
+                    if datetime.utcnow() <= end_datetime:
+                        is_premium = True
+
+            if not is_premium:
+                raise HTTPException(status_code=403, detail="Потрібна преміум-підписка для доступу до цієї теми")
+
+    # ✅ Открываем файл темы
     theme_file = os.path.join(Config.THEMES_DIR, f"theme_{theme_id}.json")
     if not os.path.exists(theme_file):
         raise HTTPException(status_code=404, detail="Theme not found")
@@ -1677,6 +1711,7 @@ async def get_theme_by_id(
         if user_id:
             with db_connection() as conn:
                 cursor = conn.cursor()
+
                 # Check if answered
                 cursor.execute(
                     "SELECT is_correct FROM answers WHERE user_id = ? AND question_id = ?",
@@ -1701,6 +1736,15 @@ async def get_theme_by_id(
         "question_count": len(theme_data.get("questions", [])),
         "questions": questions
     }
+
+@app.get("/themes/output_images/{filename}")
+async def get_image(filename: str):
+    file_path = os.path.join("data", "output_images", filename)
+
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Файл не знайдено")
+
+    return FileResponse(file_path, media_type="image/jpeg")
 
 
 @app.get("/ticket/random", tags=["questions"])
@@ -1917,6 +1961,7 @@ async def get_error_questions(user_id: str = Query(..., min_length=1)):
                 if qid in error_ids:
                     question = q.copy()
                     question["id"] = qid
+                    question["correct_index"] = q.get("correct_index")  # 👈 добавлено
                     question.pop("explanation", None)
                     questions.append(question)
 
@@ -2105,7 +2150,7 @@ def init_user_credits(user_id: str) -> bool:
         cursor.execute('''
             INSERT OR IGNORE INTO user_credits 
             (user_id, credits_used, daily_limit, last_reset_date)
-            VALUES (?, 0, 3, ?)
+            VALUES (?, 0, 20, ?)
         ''', (user_id, today))
 
         conn.commit()
@@ -2143,7 +2188,7 @@ def get_user_credit_info(user_id: str) -> Optional[dict]:
         today = datetime.utcnow().date().isoformat()
 
         # Для премиум-пользователей устанавливаем лимит 10, для остальных - 3
-        default_limit = 10 if is_premium else 3
+        default_limit = 200 if is_premium else 20
 
         # Reset if new day
         cursor.execute('''
@@ -2315,42 +2360,6 @@ async def send_feedback(
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-
-# Utility functions for testing
-def _create_test_data():
-    """Create test data for development"""
-    with db_connection() as conn:
-        cursor = conn.cursor()
-
-        # Add test user
-        cursor.execute('''
-                    INSERT OR IGNORE INTO users 
-                    (user_id, username, first_name, photo_url, created_at, last_login)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (
-            "test_user_123",
-            "test@example.com",
-            "Test User",
-            "https://example.com/photo.jpg",
-            datetime.utcnow().isoformat(),
-            datetime.utcnow().isoformat()
-        ))
-
-        # Add test credits
-        cursor.execute('''
-                    INSERT OR IGNORE INTO user_credits 
-                    (user_id, credits_used, daily_limit, last_reset_date)
-                    VALUES (?, ?, ?, ?)
-                ''', (
-            "test_user_123",
-            1,  # 1 credit used
-            3,  # Daily limit 3
-            datetime.utcnow().date().isoformat()
-        ))
-
-        conn.commit()
-
-
 # Main entry point
 if __name__ == "__main__":
     # Configure logging
@@ -2362,10 +2371,6 @@ if __name__ == "__main__":
             logging.StreamHandler()
         ]
     )
-
-    # Create test data if in development
-    if os.getenv("ENVIRONMENT") == "development":
-        _create_test_data()
 
     # Run the application
     uvicorn.run(
