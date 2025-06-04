@@ -37,8 +37,8 @@ class Config:
     GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
     GOOGLE_CLIENT_ID = "147419489204-mcv45kv1ndceffp1efnn2925cfet1ocb.apps.googleusercontent.com"
     GOOGLE_CLIENT_SECRET = "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"
-    GOOGLE_REDIRECT_URI = "http://localhost:8000/auth/google/callback"
-    FRONTEND_URI = "http://localhost:3000"
+    GOOGLE_REDIRECT_URI = "https://api.impulsepdr.online/auth/google/callback"
+    FRONTEND_URI = "https://impulsepdr.online/"
     DATA_DIR = "data"
     THEMES_DIR = os.path.join(DATA_DIR, "themes")
     IMAGES_DIR = os.path.join(DATA_DIR, "output_images")
