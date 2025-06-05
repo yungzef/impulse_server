@@ -37,7 +37,7 @@ class Config:
     # GOOGLE_REDIRECT_URI = "http://localhost:8000/auth/google/callback"
     # FRONTEND_URI = "http://localhost:3000"
     GOOGLE_REDIRECT_URI = "https://api.impulsepdr.online/auth/google/callback"
-    FRONTEND_URI = "https://impulsepdr.online/"
+    FRONTEND_URI = "https://impulsepdr.online"
     DATA_DIR = "data"
     THEMES_DIR = os.path.join(DATA_DIR, "themes")
     IMAGES_DIR = os.path.join(DATA_DIR, "output_images")
@@ -182,40 +182,32 @@ class UsageUpdate(BaseModel):
     remaining_time: int
     is_premium: bool
 
-
 # Models
 class UserRequest(BaseModel):
     user_id: str
-
 
 class UserAnswerPayload(BaseModel):
     question_id: str
     is_correct: bool
     user_id: str
 
-
 class FavoritePayload(BaseModel):
     question_id: str
     user_id: str
-
 
 class ChatMessage(BaseModel):
     role: str
     content: str
 
-
 class ChatRequest(BaseModel):
     messages: List[ChatMessage]
-
 
 class PDRQuestionRequest(BaseModel):
     question: str
     context: str = ""
 
-
 class CodeExchangeRequest(BaseModel):
     code: str
-
 
 class CreditInfoResponse(BaseModel):
     user_id: str
@@ -1727,7 +1719,7 @@ async def get_theme_by_id(
                 )
                 question["is_favorite"] = cursor.fetchone() is not None
 
-        question.pop("explanation", None)
+        #question.pop("explanation", None)
         questions.append(question)
 
     return {
