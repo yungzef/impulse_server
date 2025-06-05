@@ -92,17 +92,23 @@ def init_db():
         )
         ''')
 
-        # Create answers table
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS answers (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT,
-            question_id TEXT,
-            is_correct INTEGER,
-            timestamp TEXT,
-            FOREIGN KEY(user_id) REFERENCES users(user_id)
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT,
+                question_id TEXT,
+                is_correct INTEGER,
+                selected_index INTEGER DEFAULT -1,
+                timestamp TEXT,
+                FOREIGN KEY(user_id) REFERENCES users(user_id)
             )
         ''')
+
+        # Безопасное добавление поля, если оно уже есть — SQLite выдаст ошибку, которую игнорируем
+        try:
+            cursor.execute("ALTER TABLE answers ADD COLUMN selected_index INTEGER DEFAULT -1")
+        except Exception:
+            pass  # колонка уже существует — игнорируем
 
         # Create favorites table
         cursor.execute('''
@@ -187,9 +193,10 @@ class UserRequest(BaseModel):
     user_id: str
 
 class UserAnswerPayload(BaseModel):
+    user_id: str
     question_id: str
     is_correct: bool
-    user_id: str
+    selected_index: int
 
 class FavoritePayload(BaseModel):
     question_id: str
@@ -1706,11 +1713,13 @@ async def get_theme_by_id(
 
                 # Check if answered
                 cursor.execute(
-                    "SELECT is_correct FROM answers WHERE user_id = ? AND question_id = ?",
+                    "SELECT is_correct, selected_index FROM answers WHERE user_id = ? AND question_id = ?",
                     (user_id, question_id)
                 )
                 answer = cursor.fetchone()
-                question["was_answered_correctly"] = bool(answer[0]) if answer else None
+                if answer:
+                    question["was_answered_correctly"] = bool(answer["is_correct"])
+                    question["was_selected_index"] = answer["selected_index"]
 
                 # Check if favorite
                 cursor.execute(
@@ -2050,10 +2059,15 @@ async def submit_answer(payload: UserAnswerPayload):
 
             # Save answer
             cursor.execute(
-                """INSERT INTO answers (user_id, question_id, is_correct, timestamp)
-                   VALUES (?, ?, ?, ?)""",
-                (payload.user_id, payload.question_id, int(payload.is_correct),
-                 datetime.utcnow().isoformat())
+                """INSERT INTO answers (user_id, question_id, is_correct, selected_index, timestamp)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (
+                    payload.user_id,
+                    payload.question_id,
+                    int(payload.is_correct),
+                    payload.selected_index,
+                    datetime.utcnow().isoformat()
+                )
             )
 
             conn.commit()
