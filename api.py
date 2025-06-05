@@ -1,29 +1,27 @@
-import asyncio
+import glob
+import logging
+import os
+import random
 import re
-from pathlib import Path
+import sqlite3
+from contextlib import contextmanager
+from datetime import datetime, timedelta
+from typing import List, Dict, Optional, Any
+from urllib.parse import urlencode
+
 import httpx
 import jwt
+import requests
+import uvicorn
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query, Request, Body, Depends
+from fastapi import FastAPI, Query, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, RedirectResponse
 from httpx import AsyncClient
-from openai import OpenAI, AsyncOpenAI
+from openai import OpenAI
 from pydantic import BaseModel
-from typing import List, Dict, Optional, Any
-import json
-import os
-import glob
-import random
-from datetime import datetime, timedelta
-import sqlite3
-import uvicorn
-from urllib.parse import urlencode
-import requests
 from starlette.responses import JSONResponse
 from user_agents import parse as parse_ua
-import logging
-from contextlib import contextmanager
 
 from main import logger
 from openrouter_key_manager import OpenRouterAPIClient
@@ -31,12 +29,13 @@ from openrouter_key_manager import OpenRouterAPIClient
 # Load environment variables
 load_dotenv()
 
-
 # Configuration
 class Config:
     GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token"
     GOOGLE_CLIENT_ID = "147419489204-mcv45kv1ndceffp1efnn2925cfet1ocb.apps.googleusercontent.com"
     GOOGLE_CLIENT_SECRET = "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"
+    # GOOGLE_REDIRECT_URI = "http://localhost:8000/auth/google/callback"
+    # FRONTEND_URI = "http://localhost:3000"
     GOOGLE_REDIRECT_URI = "https://api.impulsepdr.online/auth/google/callback"
     FRONTEND_URI = "https://impulsepdr.online/"
     DATA_DIR = "data"
@@ -51,7 +50,7 @@ class Config:
 
 
 AMOUNT_TO_DAYS = {
-    3: 7,  # 29 грн
+    49_00: 7,  # 29 грн
     99_00: 30,  # 99 грн
     199_00: 90  # 199 грн
 }
@@ -335,7 +334,7 @@ def get_openrouter_headers(key: str) -> dict:
     }
 
 
-async def call_openrouter(messages: list, model: str = "google/gemma-3-27b-it:free") -> dict:
+async def call_openrouter(messages: list, model: str = "deepseek/deepseek-r1-0528:free") -> dict:
     """Robust OpenRouter API call implementation"""
     key = get_active_key()
     if not key:
@@ -1342,7 +1341,8 @@ DEFAULT_SYSTEM_PROMPT = {
         "Твоя мета — відповідати просто, грамотно та зрозумілою українською мовою."
         "Пояснюй ПДР як для людини, яка готується до іспиту."
         "Не використовуй складну лексику, відповідай коротко та чітко."
-        "Якщо щось неясно — став уточнюючі запитання."
+        "Ти відповідаеш на питання лише один раз."
+        "Ти не можешь спілкуватись з користувачем після своєї відповіді."
     )
 }
 
